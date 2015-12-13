@@ -1,0 +1,9 @@
+# Ur/Web
+*.exe
+*.sql
+
+# Sqlite
+resistance
+
+# OS X
+.DS_Store

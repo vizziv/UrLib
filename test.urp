@@ -1,0 +1,13 @@
+database host=localhost dbname=test
+sql test.sql
+minHeap 65536
+
+$/list
+$/option
+$/monad
+prelude
+lib
+sql
+ui
+clientRequest
+test
