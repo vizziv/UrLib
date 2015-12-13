@@ -5,6 +5,16 @@ fun id [t] (x : t) = x
 fun maximum [t] (_ : ord t) : t -> list t -> t = List.foldl max
 fun minimum [t] (_ : ord t) : t -> list t -> t = List.foldl min
 
+fun distinct [t] (_ : eq t) (_ : ord t) (xs : list t) =
+    let
+        fun check xs =
+            case xs of
+                x0 :: x1 :: xs => if x0 = x1 then False else check (x1 :: xs)
+              | _ => True
+    in
+        check (List.sort le xs)
+    end
+
 fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
 
 fun sub [keep] [drop] [keep ~ drop] (xs : $(keep ++ drop)) = xs --- drop
@@ -14,6 +24,18 @@ fun spawnListener [t] (action : t -> transaction unit) (chan : channel t) =
         fun listen () = x <- recv chan; action x; listen ()
     in
         spawn (listen ())
+    end
+
+fun mapiPartial [a] [b] (f : int -> a -> option b) =
+    let
+        fun mp' n acc ls =
+            case ls of
+                [] => List.rev acc
+              | x :: ls => mp' (n+1) (case f n x of
+                                          None => acc
+                                        | Some y => y :: acc) ls
+    in
+        mp' 0 []
     end
 
 fun mapNm [K] [tf1 :: K -> Type]
