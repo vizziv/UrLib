@@ -1,7 +1,7 @@
 structure CR = ClientRequest.Make(struct
     fun mkCont ask =
-        {A = fn n => debug (Lib.plural n "object"); ask (make [#B] n),
-         B = fn n => debug (Lib.plural n "thingy"); ask (make [#A] n)}
+        {A = fn n => debug (Misc.plural n "object"); ask (make [#B] n),
+         B = fn n => debug (Misc.plural n "thingy"); ask (make [#A] n)}
 end)
 
 fun test _ =

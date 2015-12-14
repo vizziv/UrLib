@@ -27,6 +27,7 @@ val channel =
     Sql.insertRow channels {Client = cli, Channel = chan};
     queryI1 (Sql.selectWhereEq requests {Client = cli})
             (fn {Request = reqz} => send chan (deserialize reqz));
+    Sql.deleteWhereEq requests {Client = cli};
     return chan
 
 fun ask req =
@@ -57,8 +58,8 @@ fun listen listeners =
                  (fn [h] l1 => l1 answer)
                  [handlers] fl ls1
     in
-        bind (rpc channel) (spawnListener (@@cases [map fst handlers] [_]
-                                                   ls2))
+        bind (rpc channel)
+             (spawnListener (@@cases [map fst handlers] [_] ls2))
     end
 
 end

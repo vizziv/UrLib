@@ -1,13 +1,13 @@
 fun sqlInjectRow [tables ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
-                 [ts ::: {Type}] (f : folder ts)
+                 [ts ::: {Type}] (fl : folder ts)
                  (injs : $(map sql_injectable ts)) (xs : $ts) =
     @map2 [sql_injectable] [ident] [sql_exp tables agg exps]
-          (@@sql_inject [tables] [agg] [exps]) f injs xs
+          (@@sql_inject [tables] [agg] [exps]) fl injs xs
 
 fun insertRow [fields ::: {Type}] [uniques ::: {{Unit}}]
-              (f : folder fields) (injs : $(map sql_injectable fields))
+              (fl : folder fields) (injs : $(map sql_injectable fields))
               (tab : sql_table fields uniques) (row : $fields) =
-    dml (insert tab (@sqlInjectRow f injs row))
+    dml (insert tab (@sqlInjectRow fl injs row))
 
 con whereEqAcc (tabs :: {{Type}}) (agg :: {{Type}}) (exps :: {Type})
                (others :: {Type}) (tab :: Name) (r :: {Type}) =
@@ -18,8 +18,9 @@ con whereEqAcc (tabs :: {{Type}}) (agg :: {{Type}}) (exps :: {Type})
 fun whereEq [tabs ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
             [keys ::: {Type}] [others ::: {Type}]
             [tab :: Name]
-            [keys ~ others] [[tab] ~ tabs] (fl : folder keys)
-            (injs : $(map sql_injectable keys)) (ks : $keys)
+            [keys ~ others] [[tab] ~ tabs]
+            (fl : folder keys) (injs : $(map sql_injectable keys))
+            (ks : $keys)
     : sql_exp ([tab = keys ++ others] ++ tabs) agg exps bool =
     let
         fun equality [nm :: Name] [t :: Type]
@@ -38,10 +39,10 @@ fun whereEq [tabs ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
                 fl injs ks [[]] ! ! ! !
     end
 
-fun selectWhereEq [keys ::: {Type}] [vals ::: {Type}] [other ::: {Type}]
-                  [keys ~ vals] [keys ~ other] [vals ~ other]
+fun selectWhereEq [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
+                  [keys ~ vals] [keys ~ others] [vals ~ others]
                   (fl : folder keys) (injs : $(map sql_injectable keys))
-                  [tabl] (_ : fieldsOf tabl (keys ++ vals ++ other))
+                  [tabl] (_ : fieldsOf tabl (keys ++ vals ++ others))
                   (tab : tabl) (ks : $keys) : sql_query [] [] _ _ =
     let
         val q1 =
@@ -50,7 +51,7 @@ fun selectWhereEq [keys ::: {Type}] [vals ::: {Type}] [other ::: {Type}]
                 {Distinct = False,
                  From = sql_from_table [#T] tab,
                  Where = @whereEq [#T] ! ! fl injs ks,
-                 GroupBy = sql_subset [[T = (vals, keys ++ other)]],
+                 GroupBy = sql_subset [[T = (vals, keys ++ others)]],
                  Having = sql_inject True,
                  SelectFields = sql_subset_all [[T = vals]],
                  SelectExps = {}}
@@ -61,3 +62,9 @@ fun selectWhereEq [keys ::: {Type}] [vals ::: {Type}] [other ::: {Type}]
              Limit = sql_no_limit,
              Offset = sql_no_offset}
     end
+
+fun deleteWhereEq [keys ::: {Type}] [others ::: {Type}] [uniques ::: {{Unit}}]
+                  [keys ~ others]
+                  (fl : folder keys) (injs : $(map sql_injectable keys))
+                  (tab : sql_table (keys ++ others) uniques) (ks : $keys) =
+    dml (delete tab (@whereEq [#T] ! ! fl injs ks))
