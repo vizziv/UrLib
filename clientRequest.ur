@@ -44,19 +44,20 @@ fun answer resp = rpc (cont resp)
 fun listen listeners =
     let
         val ls1 =
-            @@mapNm [fn h => (h.2 -> tunit) -> h.1 -> tunit]
-                    [fn hs h => (variant (map snd hs) -> tunit) -> h.1 -> tunit]
-                    (fn [done ::_] [todo ::_] [nm ::_] [h] [[nm] ~ done] [done ++ [nm = h] ~ todo] l0 f =>
-                        l0 (fn resp =>
-                               f (@@make [nm] [h.2] [map snd (done ++ todo)] !
-                                         resp)))
-                    [handlers] fl listeners
+            @mapNm [fn h => (h.2 -> tunit) -> h.1 -> tunit]
+                   [fn hs h => (variant (map snd hs) -> tunit) -> h.1 -> tunit]
+                   (fn [done ::_] [todo ::_] [nm ::_] [h]
+                       [[nm] ~ done] [done ++ [nm = h] ~ todo]
+                       l0 f =>
+                       l0 (fn resp => f (make [nm] resp)))
+                   fl
+                   listeners
         val ls2 =
-            @@mp [fn h => (variant (map snd handlers) -> tunit)
-                          -> h.1 -> tunit]
-                 [fn h => h.1 -> tunit]
-                 (fn [h] l1 => l1 answer)
-                 [handlers] fl ls1
+            @mp [fn h => (variant (map snd handlers) -> tunit) -> h.1 -> tunit]
+                [fn h => h.1 -> tunit]
+                (fn [h] l1 => l1 answer)
+                fl
+                ls1
     in
         bind (rpc channel)
              (spawnListener (@@cases [map fst handlers] [_] ls2))
