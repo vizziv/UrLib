@@ -1,4 +1,4 @@
-structure CR = ClientRequest.Make(struct
+structure CR = UserRequest.Make(struct
     fun mkCont ask =
         {A = fn n => debug (Misc.plural n "object"); ask (make [#B] n),
          B = fn n => debug (Misc.plural n "thingy"); ask (make [#A] n)}

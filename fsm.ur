@@ -10,16 +10,6 @@ type request (handlers :: {(Type * Type)}) b a =
 type fsm (handlers :: {(Type * Type)}) (states :: {Type}) =
      $(map (request handlers (variant states)) states)
 
-functor Make(M : sig
-    con handlers :: {(Type * Type)}
-    con states :: {Type}
-    val fsm :: fsm handlers states
-end) : sig
-    
-end = struct
-
-end
-
 
 (***********************)
 (* Example: Resistance *)

@@ -13,15 +13,27 @@ val cases : ts ::: {Type} -> u ::: Type
 val sub : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
           => $(keep ++ drop) -> $keep
 
+val curry : have ::: {Type} -> need ::: {Type} -> t ::: Type -> [have ~ need]
+            => ($(have ++ need) -> t) -> $have -> $need -> t
+
+val snoc : ts ::: {Type} -> nm :: Name -> t ::: Type -> [[nm] ~ ts]
+           => t -> $ts -> $([nm = t] ++ ts)
+
 val spawnListener : t ::: Type -> (t -> tunit) -> channel t -> tunit
 
 val mapiPartial : a ::: Type -> b ::: Type
                   -> (int -> a -> option b) -> list a -> list b
 
+val mapNm0 : K --> tf :: ({K} -> K -> Type)
+             -> (others :: {K} -> nm :: Name -> t ::: K
+                 -> [[nm] ~ others] => folder others
+                 -> tf ([nm = t] ++ others) t)
+             -> r ::: {K} -> folder r
+             -> $(map (tf r) r)
+
 val mapNm : K --> tf1 :: (K -> Type) -> tf2 :: ({K} -> K -> Type)
-            -> (done :: {K} -> todo :: {K}
-                -> nm :: Name -> t ::: K
-                -> [[nm] ~ done] => [done ++ [nm = t] ~ todo]
-                => tf1 t -> tf2 (done ++ [nm = t] ++ todo) t)
+            -> (others :: {K} -> nm :: Name -> t ::: K
+                -> [[nm] ~ others] => folder others
+                -> tf1 t -> tf2 ([nm = t] ++ others) t)
             -> r ::: {K} -> folder r
             -> $(map tf1 r) -> $(map (tf2 r) r)

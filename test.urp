@@ -9,5 +9,5 @@ prelude
 misc
 sql
 ui
-clientRequest
+userRequest
 test
