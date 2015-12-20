@@ -1,4 +1,10 @@
-type tunit = transaction unit
+signature Types = sig
+    type tunit = transaction unit
+    con compose = K1 ==> K2 ==> K3 ==>
+     fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
+end
+
+include Types
 
 val id : t ::: Type -> t -> t
 
@@ -16,8 +22,9 @@ val sub : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
 val curry : have ::: {Type} -> need ::: {Type} -> t ::: Type -> [have ~ need]
             => ($(have ++ need) -> t) -> $have -> $need -> t
 
-val snoc : ts ::: {Type} -> nm :: Name -> t ::: Type -> [[nm] ~ ts]
-           => t -> $ts -> $([nm = t] ++ ts)
+val snoc : ts ::: {Type} -> $ts
+           -> nm :: Name -> t ::: Type -> [[nm] ~ ts]
+           => t -> $([nm = t] ++ ts)
 
 val spawnListener : t ::: Type -> (t -> tunit) -> channel t -> tunit
 
@@ -37,3 +44,15 @@ val mapNm : K --> tf1 :: (K -> Type) -> tf2 :: ({K} -> K -> Type)
                 -> tf1 t -> tf2 ([nm = t] ++ others) t)
             -> r ::: {K} -> folder r
             -> $(map tf1 r) -> $(map (tf2 r) r)
+
+val casesMap : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
+               -> (t ::: K -> tf1 t -> tf2 t)
+               -> r ::: {K} -> folder r
+               -> variant (map tf1 r) -> variant (map tf2 r)
+
+val casesDiag : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
+                -> tf3 :: (K -> Type)
+                -> (t ::: K -> tf1 t -> tf2 t -> tf3 t)
+                -> r ::: {K} -> folder r
+                -> variant (map tf1 r) -> variant (map tf2 r)
+                -> option (variant (map tf3 r))

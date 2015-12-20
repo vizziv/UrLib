@@ -10,7 +10,7 @@ fun insert [fields ::: {Type}] [uniques ::: {{Unit}}]
     dml (Basis.insert tab (@sqlInjectRow fl injs xs))
 
 fun update [unchanged ::: {Type}] [uniques ::: {{Unit}}]
-           [changed :: {Type}] [changed ~ unchanged]
+           [changed ::: {Type}] [changed ~ unchanged]
            (fl : folder changed) (injs : $(map sql_injectable changed))
            (tab : sql_table (changed ++ unchanged) uniques)
            (xs : $changed)

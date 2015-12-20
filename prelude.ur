@@ -1,4 +1,10 @@
-type tunit = transaction unit
+signature Types = sig
+    type tunit = transaction unit
+    con compose = K1 ==> K2 ==> K3 ==>
+     fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
+end
+structure T : Types = struct end
+open T
 
 fun id [t] (x : t) = x
 
@@ -23,7 +29,7 @@ fun curry [have] [need] [t] [have ~ need]
           (f : $(have ++ need) -> t) (xs : $have) (ys : $need) =
     f (xs ++ ys)
 
-fun snoc [ts] [nm :: Name] [t] [[nm] ~ ts] (x : t) (xs : $ts) = xs ++ {nm = x}
+fun snoc [ts] (xs : $ts) [nm :: Name] [t] [[nm] ~ ts] (x : t) = xs ++ {nm = x}
 
 fun spawnListener [t] (action : t -> transaction unit) (chan : channel t) =
     let
@@ -104,6 +110,17 @@ fun mapNm [K] [tf1 :: K -> Type] [tf2 :: {K} -> K -> Type]
            (fn [todo :: {K}] [[] ~ todo] (flTodo : folder todo) =>
                {FlDone = Folder.nil, MapF = fn {} => {}})
            fl [[]] ! Folder.nil).MapF
+
+fun casesMap [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
+             (f : t ::: K -> tf1 t -> tf2 t)
+             [r ::: {K}] (fl : folder r)
+    : variant (map tf1 r) -> variant (map tf2 r) =
+    @@cases [map tf1 r] [_]
+            (@mapNm0 [fn r t => tf1 t -> variant (map tf2 r)]
+                     (fn [others ::_] [nm ::_] [t]
+                         [[nm] ~ others] _ =>
+                         compose (make [nm]) f)
+                     fl)
 
 fun casesDiag [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
               (f : t ::: K -> tf1 t -> tf2 t -> tf3 t)
