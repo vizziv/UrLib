@@ -1,17 +1,17 @@
 structure Ureq = UserRequest.Make(struct
-    con handlers = [A = _, B = _]
+    con handlers = [A = (int, int), B = (int, int)]
     type group = int
     type member = int
     fun mkCont ask =
         {A = fn foo =>
                 case foo of
-                    ({Response = n, ...} :: []) =>
+                    ({Response = n, Member = m} :: _) =>
                     debug (Misc.plural n "object");
                     ask {Members = 0 :: [], Request = (make [#B] n)}
                   | _ => return (),
          B = fn foo =>
                 case foo of
-                    ({Response = n, ...} :: []) =>
+                    ({Response = n, Member = m} :: _) =>
                     debug (Misc.plural n "thingy");
                     ask {Members = 0 :: [], Request = (make [#A] n)}
                   | _ => return ()}
