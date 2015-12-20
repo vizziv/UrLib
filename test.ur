@@ -1,11 +1,27 @@
-structure CR = UserRequest.Make(struct
+structure Ureq = UserRequest.Make(struct
+    con handlers = [A = _, B = _]
+    type group = int
+    type member = int
     fun mkCont ask =
-        {A = fn n => debug (Misc.plural n "object"); ask (make [#B] n),
-         B = fn n => debug (Misc.plural n "thingy"); ask (make [#A] n)}
+        {A = fn foo =>
+                case foo of
+                    ({Response = n, ...} :: []) =>
+                    debug (Misc.plural n "object");
+                    ask {Members = 0 :: [], Request = (make [#B] n)}
+                  | _ => return (),
+         B = fn foo =>
+                case foo of
+                    ({Response = n, ...} :: []) =>
+                    debug (Misc.plural n "thingy");
+                    ask {Members = 0 :: [], Request = (make [#A] n)}
+                  | _ => return ()}
 end)
 
+val start = Ureq.ask {Group = 0,
+                      Members = 0 :: [],
+                      Request = (make [#A] 9001)}
+
 fun test _ =
-    CR.ask (make [#A] 9001);
     let
         fun sgl answerqSrc =
             answerq <- signal answerqSrc;
@@ -23,7 +39,9 @@ fun test _ =
             return <xml>
               <dyn signal={sgl answerqSrc}/>
               {Ui.button {Value = "Start listening",
-                          Onclick = CR.listen (handlers answerqSrc)}}
+                          Onclick =
+                          Ureq.listen {Group = 0, Member = 0} (handlers answerqSrc);
+                          rpc start}}
             </xml>
     in
         return <xml>

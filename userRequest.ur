@@ -40,8 +40,7 @@ table users :
        Member : member,
        Channel : channel {Job : job, Request : request},
        Job : option job,
-       Response : option response}
-          PRIMARY KEY (Group, Member)
+       Response : option (serialized response)}
 
 fun mkChannel user =
     chan <- channel;
@@ -64,41 +63,49 @@ fun ask req =
 
 con respList t = list {Member : member, Response : t.2}
 
-fun cont (user : {Group : group, Member : member}) job resp =
+fun cont user job resp =
     let
-        val job = {Job = Some job}
-        val group = user -- #Member
-        val member = user -- #Group
+        val {Group = group, Member = member} = user
     in
-        respsq <- query1' (SELECT users.Member, users.Response
-                           FROM users
-                           WHERE {Sql.lookup (group ++ job)}
-                             AND NOT {Sql.lookup member})
-                          (fn {Member = member, Response = respz} accq =>
-                              bind accq
-                                   (casesDiag [snd] [respList] [respList]
-                                              (fn [t] resp acc =>
-                                                  {Member = member,
-                                                   Response = resp}
-                                                  :: acc)
-                                              (deserialize respz)))
-                          (Some (casesMap [snd] [respList]
-                                          (fn [t] resp =>
-                                              ({Response = resp} ++ member)
-                                              :: [])
-                                          resp));
+        respsq <- query1' (SELECT T.Member, T.Response
+                           FROM users AS T
+                           WHERE T.Group = {[group]}
+                             AND T.Job = {[Some job]}
+                             AND NOT (T.Member = {[member]}))
+                          (fn {Member = member, Response = respzq} accq =>
+                              respz <- respzq;
+                              acc <- accq;
+                              (@casesDiag [snd] [respList] [respList]
+                                          (fn [t] resp acc =>
+                                              {Member = member,
+                                               Response = resp}
+                                              :: acc)
+                                          fl
+                                          (deserialize respz)
+                                          acc))
+                          (Some (@casesMap [snd] [respList]
+                                           (fn [t] resp =>
+                                               {Member = member,
+                                                Response = resp}
+                                               :: [])
+                                           fl
+                                           resp));
         case Option.mp (@@cases [map respList handlers] [_]
-                                (mkCont (curry ask group)))
+                                (mkCont (curry ask {Group = group})))
                        respsq of
             None =>
-            Sql.update users {Response = Some resp} (Sql.lookup (user ++ job))
+            Sql.update users
+                       {Response = Some (serialize resp)}
+                       (Sql.lookup (user ++ {Job = Some job}))
           | Some action =>
-            Sql.update users {Job = None, Response = None} (Sql.lookup group);
+            Sql.update users
+                       {Job = None, Response = None}
+                       (Sql.lookup {Group = group});
             action
-
     end
 
-fun answer user job resp = rpc (cont user job resp)
+fun answer (user : {Group : group, Member : member}) job resp =
+    rpc (cont user job resp)
 
 fun listen user listeners =
     let
