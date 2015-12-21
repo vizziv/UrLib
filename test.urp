@@ -1,4 +1,4 @@
-database host=localhost dbname=test
+database host=localhost dbname=ziv
 sql test.sql
 minHeap 65536
 

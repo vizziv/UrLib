@@ -90,18 +90,17 @@ fun cont user job resp =
                                                :: [])
                                            fl
                                            resp));
-        case Option.mp (@@cases [map respList handlers] [_]
-                                (mkCont (curry ask {Group = group})))
-                       respsq of
+        case respsq of
             None =>
             Sql.update users
                        {Response = Some (serialize resp)}
                        (Sql.lookup (user ++ {Job = Some job}))
-          | Some action =>
+          | Some resps =>
             Sql.update users
                        {Job = None, Response = None}
                        (Sql.lookup {Group = group});
-            action
+            @@cases [map respList handlers] [_]
+                    (mkCont (curry ask {Group = group})) resps
     end
 
 fun answer (user : {Group : group, Member : member}) job resp =
