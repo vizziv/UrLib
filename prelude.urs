@@ -16,8 +16,8 @@ val distinct : t ::: Type -> eq t -> ord t -> list t -> bool
 val cases : ts ::: {Type} -> u ::: Type
             -> $(map (fn t => t -> u) ts) -> variant ts -> u
 
-val sub : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
-          => $(keep ++ drop) -> $keep
+val projs : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
+            => $(keep ++ drop) -> $keep
 
 val curry : have ::: {Type} -> need ::: {Type} -> t ::: Type -> [have ~ need]
             => ($(have ++ need) -> t) -> $have -> $need -> t

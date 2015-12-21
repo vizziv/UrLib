@@ -1,19 +1,15 @@
-(*****************************)
-(* Fsm: Finite State Machine *)
-(*****************************)
+(* Fsm = Finite State Machine *)
 
 open Prelude
 
-type request (handlers :: {(Type * Type)}) b a =
-     variant (map (fn h => {Arg : a -> h.1, Cont : a -> h.2 -> b}) handlers)
+type request (effects :: {(Type * Type)}) b a =
+     variant (map (fn e => {Arg : a -> e.1, Cont : a -> e.2 -> b}) effects)
 
-type fsm (handlers :: {(Type * Type)}) (states :: {Type}) =
-     $(map (request handlers (variant states)) states)
+type fsm (effects :: {(Type * Type)}) (states :: {Type}) =
+     $(map (request effects (variant states)) states)
 
 
-(***********************)
-(* Example: Resistance *)
-(***********************)
+(* Example: the Resistance card game (just a sketch for now). *)
 
 con score = [Score = _]
 con team = [Team = int]
@@ -23,7 +19,7 @@ val resistance : fsm [Propose = _, Vote = _, Go = _] _ =
      make [#Propose]
           {Arg = id,
            Cont = fn (xs : $score) players =>
-                     make [#Voting] (sub xs ++ {Team = players})},
+                     make [#Voting] (projs xs ++ {Team = players})},
      Voting =
      make [#Vote]
           {Arg = id,
@@ -31,13 +27,13 @@ val resistance : fsm [Propose = _, Vote = _, Go = _] _ =
                      if votes > 3 then
                          make [#Mission] xs
                      else
-                         make [#Proposal] (sub xs)},
+                         make [#Proposal] (projs xs)},
      Mission =
      make [#Go]
           {Arg = id,
            Cont = fn xs actions =>
                      make [#Proposal]
                           (if actions > 5 then
-                               sub xs ++ {Score = xs.Score + 1}
+                               projs xs ++ {Score = xs.Score + 1}
                            else
-                               sub xs)}}
+                               projs xs)}}

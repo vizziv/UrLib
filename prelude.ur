@@ -23,7 +23,7 @@ fun distinct [t] (_ : eq t) (_ : ord t) (xs : list t) =
 
 fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
 
-fun sub [keep] [drop] [keep ~ drop] (xs : $(keep ++ drop)) = xs --- drop
+fun projs [keep] [drop] [keep ~ drop] (xs : $(keep ++ drop)) = xs --- drop
 
 fun curry [have] [need] [t] [have ~ need]
           (f : $(have ++ need) -> t) (xs : $have) (ys : $need) =

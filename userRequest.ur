@@ -1,10 +1,10 @@
-open Prelude
-
 (*
 TODO:
   - Make [ask] not break when called concurrently.
   - Double check database cleanup needs.
 *)
+
+open Prelude
 
 functor Make(M : sig
     con handlers :: {(Type * Type)}
@@ -55,7 +55,7 @@ fun ask req =
     in
         job <- nextval jobs;
         queryI1 (Sql.select1 users cond)
-                (fn {Channel = chan} => send chan (sub req ++ {Job = job}));
+                (fn {Channel = chan} => send chan (projs req ++ {Job = job}));
         Sql.update users {Job = Some job} cond
     end
 
