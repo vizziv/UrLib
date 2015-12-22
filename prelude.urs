@@ -2,6 +2,7 @@ signature Types = sig
     type tunit = transaction unit
     con compose = K1 ==> K2 ==> K3 ==>
      fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
+    con forget = K ==> fn (t :: K) => ()
 end
 
 include Types
@@ -15,6 +16,12 @@ val distinct : t ::: Type -> eq t -> ord t -> list t -> bool
 
 val cases : ts ::: {Type} -> u ::: Type
             -> $(map (fn t => t -> u) ts) -> variant ts -> u
+
+val casesU : K --> t ::: Type -> r ::: {K} -> folder r
+             -> variant (map (fn _ => t) r) -> t
+
+val proj : nm :: Name -> t ::: Type -> drop ::: {Type} -> [[nm] ~ drop]
+           => $([nm = t] ++ drop) -> t
 
 val projs : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
             => $(keep ++ drop) -> $keep

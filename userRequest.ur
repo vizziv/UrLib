@@ -1,6 +1,6 @@
 (*
 TODO:
-  - Make [ask] not break when called concurrently.
+  - Make [ask] not break when called twice concurrently with the same group.
   - Double check database cleanup needs.
 *)
 
@@ -81,8 +81,7 @@ fun cont user job resp =
                                                Response = resp}
                                               :: acc)
                                           fl
-                                          (deserialize respz)
-                                          acc))
+                                          (deserialize respz) acc))
                           (Some (@casesMap [snd] [respList]
                                            (fn [t] resp =>
                                                {Member = member,
