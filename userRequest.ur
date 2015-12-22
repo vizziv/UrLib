@@ -75,20 +75,20 @@ fun cont user job resp =
                           (fn {Member = member, Response = respzq} accq =>
                               respz <- respzq;
                               acc <- accq;
-                              (@casesDiag [snd] [respList] [respList]
-                                          (fn [t] resp acc =>
-                                              {Member = member,
-                                               Response = resp}
-                                              :: acc)
-                                          fl
-                                          (deserialize respz) acc))
-                          (Some (@casesMap [snd] [respList]
-                                           (fn [t] resp =>
+                              (@casesDiagU [snd] [respList] [respList]
+                                           (fn [t] resp acc =>
                                                {Member = member,
                                                 Response = resp}
-                                               :: [])
+                                               :: acc)
                                            fl
-                                           resp));
+                                           (deserialize respz) acc))
+                          (Some (@casesMapU [snd] [respList]
+                                            (fn [t] resp =>
+                                                {Member = member,
+                                                 Response = resp}
+                                                :: [])
+                                            fl
+                                            resp));
         case respsq of
             None =>
             Sql.update users

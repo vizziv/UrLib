@@ -17,8 +17,8 @@ val distinct : t ::: Type -> eq t -> ord t -> list t -> bool
 val cases : ts ::: {Type} -> u ::: Type
             -> $(map (fn t => t -> u) ts) -> variant ts -> u
 
-val casesU : K --> t ::: Type -> r ::: {K} -> folder r
-             -> variant (map (fn _ => t) r) -> t
+val casesGet : K --> t ::: Type -> r ::: {K} -> folder r
+               -> variant (map (fn _ => t) r) -> t
 
 val proj : nm :: Name -> t ::: Type -> drop ::: {Type} -> [[nm] ~ drop]
            => $([nm = t] ++ drop) -> t
@@ -53,13 +53,25 @@ val mapNm : K --> tf1 :: (K -> Type) -> tf2 :: ({K} -> K -> Type)
             -> $(map tf1 r) -> $(map (tf2 r) r)
 
 val casesMap : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
-               -> (t ::: K -> tf1 t -> tf2 t)
                -> r ::: {K} -> folder r
+               -> $(map (fn t :: K => tf1 t -> tf2 t) r)
                -> variant (map tf1 r) -> variant (map tf2 r)
+
+val casesMapU : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
+                -> (t ::: K -> tf1 t -> tf2 t)
+                -> r ::: {K} -> folder r
+                -> variant (map tf1 r) -> variant (map tf2 r)
 
 val casesDiag : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
                 -> tf3 :: (K -> Type)
-                -> (t ::: K -> tf1 t -> tf2 t -> tf3 t)
                 -> r ::: {K} -> folder r
+                -> $(map (fn t :: K => tf1 t -> tf2 t -> tf3 t) r)
                 -> variant (map tf1 r) -> variant (map tf2 r)
                 -> option (variant (map tf3 r))
+
+val casesDiagU : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
+                 -> tf3 :: (K -> Type)
+                 -> (t ::: K -> tf1 t -> tf2 t -> tf3 t)
+                 -> r ::: {K} -> folder r
+                 -> variant (map tf1 r) -> variant (map tf2 r)
+                 -> option (variant (map tf3 r))

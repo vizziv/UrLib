@@ -25,7 +25,7 @@ fun distinct [t] (_ : eq t) (_ : ord t) (xs : list t) =
 
 fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
 
-fun casesU [K] [t ::: Type] [r ::: {K}] (fl : folder r) =
+fun casesGet [K] [t ::: Type] [r ::: {K}] (fl : folder r) =
     @@cases [map (fn _ => t) r] [t]
             (@map0 [fn _ => t -> t] (fn [ignore ::_] => id) fl)
 
@@ -120,19 +120,28 @@ fun mapNm [K] [tf1 :: K -> Type] [tf2 :: {K} -> K -> Type]
            fl [[]] ! Folder.nil).MapF
 
 fun casesMap [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
-             (f : t ::: K -> tf1 t -> tf2 t)
              [r ::: {K}] (fl : folder r)
+             (fs : $(map (fn t :: K => tf1 t -> tf2 t) r))
     : variant (map tf1 r) -> variant (map tf2 r) =
     @@cases [map tf1 r] [_]
-            (@mapNm0 [fn r t => tf1 t -> variant (map tf2 r)]
-                     (fn [others ::_] [nm ::_] [t]
-                         [[nm] ~ others] _ =>
-                         compose (make [nm]) f)
-                     fl)
+            (@mapNm [fn t => tf1 t -> tf2 t]
+                    [fn r t => tf1 t -> variant (map tf2 r)]
+                    (fn [others ::_] [nm ::_] [t]
+                        [[nm] ~ others] _ =>
+                        compose (make [nm]))
+                    fl
+                    fs)
+
+fun casesMapU [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
+              (f : t ::: K -> tf1 t -> tf2 t)
+              [r ::: {K}] (fl : folder r)
+    : variant (map tf1 r) -> variant (map tf2 r) =
+    @casesMap [tf1] [tf2] fl
+              (@map0 [fn t => tf1 t -> tf2 t] (fn [t ::_] => f) fl)
 
 fun casesDiag [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
-              (f : t ::: K -> tf1 t -> tf2 t -> tf3 t)
               [r ::: {K}] (fl : folder r)
+              (fs : $(map (fn t :: K => tf1 t -> tf2 t -> tf3 t) r))
     : variant (map tf1 r) -> variant (map tf2 r)
       -> option (variant (map tf3 r)) =
     let
@@ -144,14 +153,24 @@ fun casesDiag [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
                   fl_others
     in
         @@cases [map tf1 r] [_]
-                (@mapNm0 [fn r t =>
-                             tf1 t -> variant (map tf2 r)
-                             -> option (variant (map tf3 r))]
-                         (fn [others ::_] [nm ::_] [t]
-                             [[nm] ~ others] fl_others
-                             (x : tf1 t) =>
-                             cases (@nones ! fl_others
-                                    ++ {nm = fn (y : tf2 t) =>
-                                                Some (make [nm] (f x y))}))
-                         fl)
+                (@mapNm [fn t => tf1 t -> tf2 t -> tf3 t]
+                        [fn r t =>
+                            tf1 t -> variant (map tf2 r)
+                            -> option (variant (map tf3 r))]
+                        (fn [others ::_] [nm ::_] [t]
+                            [[nm] ~ others] fl_others
+                            (f : tf1 t -> tf2 t -> tf3 t) (x : tf1 t) =>
+                            cases (@nones ! fl_others
+                                   ++ {nm = fn (y : tf2 t) =>
+                                               Some (make [nm] (f x y))}))
+                        fl
+                        fs)
     end
+
+fun casesDiagU [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
+               (f : t ::: K -> tf1 t -> tf2 t -> tf3 t)
+               [r ::: {K}] (fl : folder r)
+    : variant (map tf1 r) -> variant (map tf2 r)
+      -> option (variant (map tf3 r)) =
+    @casesDiag [tf1] [tf2] [tf3] fl
+               (@map0 [fn t => tf1 t -> tf2 t -> tf3 t] (fn [t ::_] => f) fl)
