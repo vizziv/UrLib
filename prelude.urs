@@ -3,11 +3,19 @@ signature Types = sig
     con compose = K1 ==> K2 ==> K3 ==>
      fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
     con forget = K ==> fn (t :: K) => ()
+    con equal :: K --> K -> K -> Type
 end
 
 include Types
 
 val id : t ::: Type -> t -> t
+
+val refl : K --> a ::: K -> equal a a
+
+val castL : K --> a ::: K -> b ::: K
+            -> equal a b -> f :: (K -> Type) -> f b -> f a
+val castR : K --> a ::: K -> b ::: K
+            -> equal a b -> f :: (K -> Type) -> f a -> f b
 
 val maximum : t ::: Type -> ord t -> t -> list t -> t
 val minimum : t ::: Type -> ord t -> t -> list t -> t
@@ -41,17 +49,19 @@ val mapiPartial : a ::: Type -> b ::: Type
                   -> (int -> a -> option b) -> list a -> list b
 
 val mapNm0 : K --> tf :: ({K} -> K -> Type)
+             -> r ::: {K} -> folder r
              -> (others :: {K} -> nm :: Name -> t ::: K
                  -> [[nm] ~ others] => folder others
+                 -> equal r ([nm = t] ++ others)
                  -> tf ([nm = t] ++ others) t)
-             -> r ::: {K} -> folder r
              -> $(map (tf r) r)
 
 val mapNm : K --> tf1 :: (K -> Type) -> tf2 :: ({K} -> K -> Type)
+            -> r ::: {K} -> folder r
             -> (others :: {K} -> nm :: Name -> t ::: K
                 -> [[nm] ~ others] => folder others
+                -> equal r ([nm = t] ++ others)
                 -> tf1 t -> tf2 ([nm = t] ++ others) t)
-            -> r ::: {K} -> folder r
             -> $(map tf1 r) -> $(map (tf2 r) r)
 
 val casesMap : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
@@ -60,8 +70,8 @@ val casesMap : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
                -> variant (map tf1 r) -> variant (map tf2 r)
 
 val casesMapU : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
-                -> (t ::: K -> tf1 t -> tf2 t)
                 -> r ::: {K} -> folder r
+                -> (t ::: K -> tf1 t -> tf2 t)
                 -> variant (map tf1 r) -> variant (map tf2 r)
 
 val casesDiag : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
@@ -73,7 +83,7 @@ val casesDiag : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
 
 val casesDiagU : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
                  -> tf3 :: (K -> Type)
-                 -> (t ::: K -> tf1 t -> tf2 t -> tf3 t)
                  -> r ::: {K} -> folder r
+                 -> (t ::: K -> tf1 t -> tf2 t -> tf3 t)
                  -> variant (map tf1 r) -> variant (map tf2 r)
                  -> option (variant (map tf3 r))

@@ -53,11 +53,9 @@ fun mkChannel user =
                (user ++ {Channel = chan, Instance = None, Response = None});
     return chan
 
-fun instantiate [tf] job r =
-    {Instance = Some (serialize (@casesMapU [tf] [fn _ => int]
-                                            (fn [t] _ => job)
-                                            fl
-                                            r))}
+fun instantiate [tf] job variant =
+    {Instance = Some (serialize (@casesMapU [tf] [fn _ => int] fl
+                                            (fn [t] _ => job) variant))}
 
 fun ask req =
     let
@@ -86,19 +84,17 @@ fun cont user job resp =
     in
         respsq <- query1' (Sql.selectLookup users (group ++ instance))
                           (fn {Member = member', Response = respzq} accq =>
-                              respz <- (if @eq eq_member member' member.Member
+                              respz <- (if member' = member.Member
                                         then Some (serialize resp)
                                         else respzq);
                               acc <- accq;
-                              (@casesDiagU [snd] [respList] [respList]
+                              (@casesDiagU [snd] [respList] [respList] fl
                                            (fn [t] resp acc =>
                                                (member ++ {Response = resp})
                                                :: acc)
-                                           fl
                                            (deserialize respz) acc))
-                          (Some (@casesMapU [snd] [respList]
+                          (Some (@casesMapU [snd] [respList] fl
                                             (fn [t] _ => [])
-                                            fl
                                             resp));
         case respsq of
             None =>
@@ -118,40 +114,51 @@ fun answer (user : {Group : group, Member : member}) job resp =
 
 fun listen user listeners =
     let
-        val ls1 =
+        fun ls job =
             @mapNm [fn h => (h.2 -> tunit) -> h.1 -> tunit]
-                   [fn hs h => (variant (map snd hs) -> tunit) -> h.1 -> tunit]
-                   (fn [others ::_] [nm ::_] [h] [[nm] ~ others] _ l0 f =>
-                       l0 (fn resp => f (make [nm] resp)))
+                   [fn hs h => h.1 -> tunit]
                    fl
+                   (fn [others ::_] [nm ::_] [h]
+                       [[nm] ~ others] _ (pf : equal _ _)
+                       l0 =>
+                       l0 (fn resp =>
+                              answer user job
+                                     (castL pf [fn hs => variant (map snd hs)]
+                                            (make [nm] resp))))
                    listeners
-        fun ls2 job =
-            @mp [fn h => (response -> tunit) -> h.1 -> tunit]
-                [fn h => h.1 -> tunit]
-                (fn [h] l1 => l1 (answer user job))
-                fl
-                ls1
     in
         bind (rpc (mkChannel user))
              (spawnListener (fn {Job = job, Request = req} =>
                                 (@@cases [map fst handlers] [_]
-                                         (ls2 job)
+                                         (ls job)
                                          req)))
     end
 
-(* type submitRequest = *)
-(*      variant (map (fn h => {Submit: h.2 -> tunit, Request: h.1}) handlers) *)
+type submitRequest h = {Submit : h.2 -> tunit, Request : h.1}
+type submitRequests (hs :: {(Type * Type)}) = variant (map submitRequest hs)
 
-(* fun signal (user : {Group : group, Member : member}) = *)
-(*     src <- source (None : option submitRequest); *)
-(*     listen user *)
-(*            (@mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] *)
-(*                     (fn [others ::_] [nm ::_] [h] [[nm] ~ others] *)
-(*                         (submit : h.2 -> tunit) (req : h.1) => *)
-(*                         set src (Some (@@make [nm] [_] [others] *)
-(*                                               {Submit = submit, *)
-(*                                                Request = req}))) *)
-(*                     fl); *)
-(*     return (signal src) *)
+fun signal (user : {Group : group, Member : member}) =
+    (src : source (option (submitRequests handlers))) <- source None;
+    listen user
+           (@mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] fl
+                    (fn [others ::_] [nm ::_] [h] [[nm] ~ others]
+                        _ (pf : equal _ _)
+                        (submit : h.2 -> tunit) (req : h.1) =>
+                        let
+                            val cast =
+                                castL pf
+                                      (* Using [submitRequests] causes hang! *)
+                                      [fn hs =>
+                                          variant
+                                              (map (fn h =>
+                                                       {Submit : h.2 -> tunit,
+                                                        Request : h.1})
+                                                       hs)]
+                        in
+                            set src
+                                (Some (cast (make [nm] {Submit = submit,
+                                                        Request = req})))
+                        end));
+    return (Basis.signal src)
 
 end

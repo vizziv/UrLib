@@ -3,12 +3,25 @@ signature Types = sig
     con compose = K1 ==> K2 ==> K3 ==>
      fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
     con forget = K ==> fn (t :: K) => ()
+    con equal :: K --> K -> K -> Type
 end
 
-structure T : Types = struct end
+structure T : Types where
+              con equal = K ==>
+               fn a b =>
+                  {CastL : f :: (K -> Type) -> f b -> f a,
+                   CastR : f :: (K -> Type) -> f a -> f b} = struct end
 open T
 
 fun id [t] (x : t) = x
+
+val refl : K --> a ::: K -> equal a a =
+ fn [K] [a] =>
+    {CastL = fn [tf :: K -> Type] => id,
+     CastR = fn [tf :: K -> Type] => id}
+
+fun castL [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastL
+fun castR [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastR
 
 fun maximum [t] (_ : ord t) : t -> list t -> t = List.foldl max
 fun minimum [t] (_ : ord t) : t -> list t -> t = List.foldl min
@@ -64,65 +77,74 @@ fun mapiPartial [a] [b] (f : int -> a -> option b) =
     end
 
 fun mapNm0 [K] [tf :: {K} -> K -> Type]
+           [r ::: {K}] (fl : folder r)
            (f : others :: {K} -> nm :: Name -> t ::: K
                 -> [[nm] ~ others] => folder others
+                -> equal r ([nm = t] ++ others)
                 -> tf ([nm = t] ++ others) t)
-           [r ::: {K}] (fl : folder r)
     : $(map (tf r) r) =
     (@fold [fn done :: {K} =>
                todo :: {K} -> [done ~ todo] => folder todo
+               -> equal r (done ++ todo)
                -> {FlDone : folder done,
-                   R : $(map (tf (done ++ todo)) done)}]
+                   MapF : $(map (tf (done ++ todo)) done)}]
            (fn [nm :: Name] [t :: K] [done :: {K}] [[nm] ~ done]
                (acc : todo :: {K} -> [done ~ todo] => folder todo
+                      -> equal r (done ++ todo)
                       -> {FlDone : folder done,
-                          R : $(map (tf (done ++ todo)) done)})
-               [todo :: {K}]
-               [done ++ [nm = t] ~ todo] (flTodo : folder todo) =>
+                          MapF : $(map (tf (done ++ todo)) done)})
+               [todo :: {K}] [done ++ [nm = t] ~ todo] (flTodo : folder todo)
+               (cast : equal r (done ++ [nm = t] ++ todo)) =>
                let
-                   val acc = @acc [[nm = t] ++ todo]
-                                  ! (@Folder.cons [nm] [t] ! flTodo)
+                   val acc = @acc [[nm = t] ++ todo] !
+                                  (@Folder.cons [nm] [t] ! flTodo)
+                                  cast
                in
                    {FlDone = @Folder.cons [nm] [t] ! acc.FlDone,
-                    R = acc.R
-                        ++ {nm = @f [done ++ todo] [nm]
-                                    ! (@Folder.concat ! acc.FlDone flTodo)}}
+                    MapF = acc.MapF
+                        ++ {nm = @f [done ++ todo] [nm] !
+                                    (@Folder.concat ! acc.FlDone flTodo)
+                                    cast}}
                end)
-           (fn [todo :: {K}] [[] ~ todo] (flTodo : folder todo) =>
-               {FlDone = Folder.nil, R = {}})
-           fl [[]] ! Folder.nil).R
+           (fn [todo :: {K}] [[] ~ todo] (_ : folder todo) _ =>
+               {FlDone = Folder.nil, MapF = {}})
+           fl [[]] ! Folder.nil refl).MapF
 
 fun mapNm [K] [tf1 :: K -> Type] [tf2 :: {K} -> K -> Type]
+          [r ::: {K}] (fl : folder r)
           (f : others :: {K} -> nm :: Name -> t ::: K
                -> [[nm] ~ others] => folder others
+               -> equal r ([nm = t] ++ others)
                -> tf1 t -> tf2 ([nm = t] ++ others) t)
-          [r ::: {K}] (fl : folder r)
     : $(map tf1 r) -> $(map (tf2 r) r) =
     (@fold [fn done :: {K} =>
                todo :: {K} -> [done ~ todo] => folder todo
+               -> equal r (done ++ todo)
                -> {FlDone : folder done,
                    MapF : $(map tf1 done) -> $(map (tf2 (done ++ todo)) done)}]
            (fn [nm :: Name] [t :: K] [done :: {K}] [[nm] ~ done]
                (acc : todo :: {K} -> [done ~ todo] => folder todo
+                      -> equal r (done ++ todo)
                       -> {FlDone : folder done,
                           MapF : $(map tf1 done)
                                  -> $(map (tf2 (done ++ todo)) done)})
-               [todo :: {K}]
-               [done ++ [nm = t] ~ todo] (fl_todo : folder todo) =>
+               [todo :: {K}] [done ++ [nm = t] ~ todo] (fl_todo : folder todo)
+               (cast : equal r (done ++ [nm = t] ++ todo)) =>
                let
-                   val acc = @acc [[nm = t] ++ todo]
-                                  ! (@Folder.cons [nm] [t] ! fl_todo)
+                   val acc =
+                       @acc [[nm = t] ++ todo] !
+                            (@Folder.cons [nm] [t] ! fl_todo)
+                            cast
                in
                    {FlDone = @Folder.cons [nm] [t] ! acc.FlDone,
                     MapF = fn (x : $(map tf1 (done ++ [nm = t]))) =>
                               acc.MapF (x -- nm)
-                              ++ {nm = @f [done ++ todo] [nm]
-                                        ! (@Folder.concat ! acc.FlDone fl_todo)
-                                        x.nm}}
+                              ++ {nm = @f [done ++ todo] [nm] !
+                                          (@Folder.concat ! acc.FlDone fl_todo)
+                                          cast x.nm}}
                end)
-           (fn [todo :: {K}] [[] ~ todo] (fl_todo : folder todo) =>
-               {FlDone = Folder.nil, MapF = fn {} => {}})
-           fl [[]] ! Folder.nil).MapF
+           (fn [todo :: {K}] [[] ~ todo] _ _ => {FlDone = Folder.nil, MapF = fn {} => {}})
+           fl [[]] ! Folder.nil refl).MapF
 
 fun casesMap [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
              [r ::: {K}] (fl : folder r)
@@ -131,15 +153,15 @@ fun casesMap [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
     @@cases [map tf1 r] [_]
             (@mapNm [fn t => tf1 t -> tf2 t]
                     [fn r t => tf1 t -> variant (map tf2 r)]
-                    (fn [others ::_] [nm ::_] [t]
-                        [[nm] ~ others] _ =>
-                        compose (make [nm]))
                     fl
+                    (fn [others ::_] [nm ::_] [t]
+                        [[nm] ~ others] _ _ =>
+                        compose (make [nm]))
                     fs)
 
 fun casesMapU [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
-              (f : t ::: K -> tf1 t -> tf2 t)
               [r ::: {K}] (fl : folder r)
+              (f : t ::: K -> tf1 t -> tf2 t)
     : variant (map tf1 r) -> variant (map tf2 r) =
     @casesMap [tf1] [tf2] fl
               (@map0 [fn t => tf1 t -> tf2 t] (fn [t ::_] => f) fl)
@@ -162,19 +184,19 @@ fun casesDiag [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
                         [fn r t =>
                             tf1 t -> variant (map tf2 r)
                             -> option (variant (map tf3 r))]
+                        fl
                         (fn [others ::_] [nm ::_] [t]
-                            [[nm] ~ others] fl_others
+                            [[nm] ~ others] fl_others _
                             (f : tf1 t -> tf2 t -> tf3 t) (x : tf1 t) =>
                             cases (@nones ! fl_others
                                    ++ {nm = fn (y : tf2 t) =>
                                                Some (make [nm] (f x y))}))
-                        fl
                         fs)
     end
 
 fun casesDiagU [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
-               (f : t ::: K -> tf1 t -> tf2 t -> tf3 t)
                [r ::: {K}] (fl : folder r)
+               (f : t ::: K -> tf1 t -> tf2 t -> tf3 t)
     : variant (map tf1 r) -> variant (map tf2 r)
       -> option (variant (map tf3 r)) =
     @casesDiag [tf1] [tf2] [tf3] fl
