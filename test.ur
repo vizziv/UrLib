@@ -5,13 +5,13 @@ structure Ureq = UserRequest.Make(struct
     fun mkCont ask =
         {A = fn foo =>
                 case foo of
-                    ({Response = n, Member = m} :: _) =>
+                    ({Response = n, Member = m} :: []) =>
                     debug (Misc.plural n "object");
                     ask {Members = 0 :: [], Request = (make [#B] n)}
                   | _ => return (),
          B = fn foo =>
                 case foo of
-                    ({Response = n, Member = m} :: _) =>
+                    ({Response = n, Member = m} :: []) =>
                     debug (Misc.plural n "thingy");
                     ask {Members = 0 :: [], Request = (make [#A] n)}
                   | _ => return ()}

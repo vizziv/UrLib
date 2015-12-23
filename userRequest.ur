@@ -10,9 +10,10 @@ functor Make(M : sig
     con handlers :: {(Type * Type)}
     val fl : folder handlers
     type group
-    val sql_group : sql_injectable group
+    val sql_group : sql_injectable_prim group
     type member
-    val sql_member : sql_injectable member
+    val sql_member : sql_injectable_prim member
+    val eq_member : eq member
     type request = variant (map fst handlers)
     val mkCont : ({Members : list member, Request : request} -> tunit)
                  -> $(map (fn h => list {Member : member, Response : h.2} -> tunit)
@@ -30,22 +31,33 @@ end = struct
 open M
 
 type job = int
-
+type instance = variant (map (fn _ => job) handlers)
 type response = variant (map snd handlers)
 
 sequence jobs
 
+val pkeyGroupMember = @primary_key [#Group] [[Member = _]] ! !
+                                   {Group = sql_group, Member = sql_member}
+
 table users :
       {Group : group,
        Member : member,
-       Channel : channel {Job : job, Request : request},
-       Job : option job,
+       Channel : channel {Job : int, Request : request},
+       Instance : option (serialized instance),
        Response : option (serialized response)}
+          PRIMARY KEY {{pkeyGroupMember}}
 
 fun mkChannel user =
     chan <- channel;
-    Sql.insert users (user ++ {Channel = chan, Job = None, Response = None});
+    Sql.insert users
+               (user ++ {Channel = chan, Instance = None, Response = None});
     return chan
+
+fun instantiate [tf] job r =
+    {Instance = Some (serialize (@casesMapU [tf] [fn _ => int]
+                                            (fn [t] _ => job)
+                                            fl
+                                            r))}
 
 fun ask req =
     let
@@ -54,52 +66,51 @@ fun ask req =
                                               req.Members)})
     in
         job <- nextval jobs;
-        queryI1 (Sql.select1 users cond)
-                (fn {Channel = chan} => send chan (projs req ++ {Job = job}));
-        Sql.update users {Job = Some job} cond
+        let
+            val instance = instantiate job req.Request
+        in
+            queryI1 (Sql.select1 users cond)
+                    (fn {Channel = chan} =>
+                        send chan (projs req ++ {Job = job}));
+            Sql.update users instance cond
+        end
     end
-
-(* TODO: replace [--] usages with [sub]? *)
 
 con respList t = list {Member : member, Response : t.2}
 
 fun cont user job resp =
     let
-        val {Group = group, Member = member} = user
+        val group = user -- #Member
+        val member = user -- #Group
+        val instance = instantiate job resp
     in
-        respsq <- query1' (SELECT T.Member, T.Response
-                           FROM users AS T
-                           WHERE T.Group = {[group]}
-                             AND T.Job = {[Some job]}
-                             AND NOT (T.Member = {[member]}))
-                          (fn {Member = member, Response = respzq} accq =>
-                              respz <- respzq;
+        respsq <- query1' (Sql.selectLookup users (group ++ instance))
+                          (fn {Member = member', Response = respzq} accq =>
+                              respz <- (if @eq eq_member member' member.Member
+                                        then Some (serialize resp)
+                                        else respzq);
                               acc <- accq;
                               (@casesDiagU [snd] [respList] [respList]
                                            (fn [t] resp acc =>
-                                               {Member = member,
-                                                Response = resp}
+                                               (member ++ {Response = resp})
                                                :: acc)
                                            fl
                                            (deserialize respz) acc))
                           (Some (@casesMapU [snd] [respList]
-                                            (fn [t] resp =>
-                                                {Member = member,
-                                                 Response = resp}
-                                                :: [])
+                                            (fn [t] _ => [])
                                             fl
                                             resp));
         case respsq of
             None =>
             Sql.update users
                        {Response = Some (serialize resp)}
-                       (Sql.lookup (user ++ {Job = Some job}))
+                       (Sql.lookup (user ++ instance))
           | Some resps =>
             Sql.update users
-                       {Job = None, Response = None}
-                       (Sql.lookup {Group = group});
+                       {Instance = None, Response = None}
+                       (Sql.lookup group);
             @@cases [map respList handlers] [_]
-                    (mkCont (curry ask {Group = group})) resps
+                    (mkCont (curry ask group)) resps
     end
 
 fun answer (user : {Group : group, Member : member}) job resp =
@@ -123,7 +134,24 @@ fun listen user listeners =
     in
         bind (rpc (mkChannel user))
              (spawnListener (fn {Job = job, Request = req} =>
-                                (@@cases [map fst handlers] [_] (ls2 job) req)))
+                                (@@cases [map fst handlers] [_]
+                                         (ls2 job)
+                                         req)))
     end
+
+(* type submitRequest = *)
+(*      variant (map (fn h => {Submit: h.2 -> tunit, Request: h.1}) handlers) *)
+
+(* fun signal (user : {Group : group, Member : member}) = *)
+(*     src <- source (None : option submitRequest); *)
+(*     listen user *)
+(*            (@mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] *)
+(*                     (fn [others ::_] [nm ::_] [h] [[nm] ~ others] *)
+(*                         (submit : h.2 -> tunit) (req : h.1) => *)
+(*                         set src (Some (@@make [nm] [_] [others] *)
+(*                                               {Submit = submit, *)
+(*                                                Request = req}))) *)
+(*                     fl); *)
+(*     return (signal src) *)
 
 end

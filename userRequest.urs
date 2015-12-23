@@ -4,9 +4,10 @@ functor Make(M : sig
     con handlers :: {(Type * Type)}
     val fl : folder handlers
     type group
-    val sql_group : sql_injectable group
+    val sql_group : sql_injectable_prim group
     type member
-    val sql_member : sql_injectable member
+    val sql_member : sql_injectable_prim member
+    val eq_member : eq member
     type request = variant (map fst handlers)
     val mkCont : ({Members : list member, Request : request} -> tunit)
                  -> $(map (fn h => list {Member : member, Response : h.2} -> tunit)

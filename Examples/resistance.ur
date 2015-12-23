@@ -1,6 +1,6 @@
 open Prelude
 
-open Fsm.Make(struct
+structure M = struct
     con score = [Score = int]
     con team = [Team = int]
     type label = int
@@ -18,4 +18,9 @@ open Fsm.Make(struct
                                 projs xs ++ {Score = xs.Score + 1}
                             else
                                 projs xs)}
-end)
+end
+
+structure F = Fsm.Make(M)
+
+structure U = UserRequest.Make(struct
+    con handlers = map (M.)

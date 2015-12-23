@@ -39,12 +39,17 @@ fun curry [have] [need] [t] [have ~ need]
 
 fun snoc [ts] (xs : $ts) [nm :: Name] [t] [[nm] ~ ts] (x : t) = xs ++ {nm = x}
 
-fun spawnListener [t] (action : t -> transaction unit) (chan : channel t) =
+fun spawnListener [t] (action : t -> tunit) (chan : channel t) =
     let
         fun listen () = x <- recv chan; action x; listen ()
     in
         spawn (listen ())
     end
+
+fun spawnSignal [t] (chan : channel t) : transaction (signal (option t)) =
+    src <- source None;
+    spawnListener (compose (set src) Some) chan;
+    return (signal src)
 
 fun mapiPartial [a] [b] (f : int -> a -> option b) =
     let

@@ -81,14 +81,14 @@ fun selectLookup [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
                  (fl : folder keys) (injs : $(map sql_injectable keys))
                  [tabl] (_ : fieldsOf tabl (keys ++ vals ++ others))
                  (tab : tabl) (ks : $keys) =
-    @@select1 [_] [keys ++ others] ! [_] _ tab (@lookup ! ! fl injs ks)
+    @@select1 [vals] [keys ++ others] ! [_] _ tab (@lookup ! ! fl injs ks)
 
 fun selectLookups [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
                   [keys ~ vals] [keys ~ others] [vals ~ others]
                   (fl : folder keys) (injs : $(map sql_injectable keys))
                   [tabl] (_ : fieldsOf tabl (keys ++ vals ++ others))
                   (tab : tabl) (kss : list $keys) =
-    @@select1 [_] [keys ++ others] ! [_] _ tab (@lookups ! ! fl injs kss)
+    @@select1 [vals] [keys ++ others] ! [_] _ tab (@lookups ! ! fl injs kss)
 
 fun deleteLookup [keys ::: {Type}] [others ::: {Type}] [uniques ::: {{Unit}}]
                  [keys ~ others]
