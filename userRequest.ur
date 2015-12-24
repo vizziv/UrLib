@@ -16,7 +16,8 @@ functor Make(M : sig
     val eq_member : eq member
     type request = variant (map fst handlers)
     val mkCont : ({Members : list member, Request : request} -> tunit)
-                 -> $(map (fn h => list {Member : member, Response : h.2} -> tunit)
+                 -> $(map (fn h =>
+                              list {Member : member, Response : h.2} -> tunit)
                           handlers)
 end) : sig
     val ask : {Group : M.group, Members : list M.member, Request : M.request}
@@ -42,21 +43,27 @@ type response = variant (map snd handlers)
 sequence jobs
 
 val pkeyGroupMember = @primary_key [#Group] [[Member = _]] ! !
-                                   {Group = sql_group, Member = sql_member}
+                                   {Group = sql_group,
+                                    Member = sql_member}
 
 table users :
       {Group : group,
        Member : member,
        Channel : channel {Job : int, Request : request},
+       Key : int,
        Instance : option (serialized instance),
        Response : option (serialized response)}
           PRIMARY KEY {{pkeyGroupMember}}
 
-fun mkChannel user =
+fun init user : transaction {Channel : channel _, Key : int} =
     chan <- channel;
-    Sql.insert users
-               (user ++ {Channel = chan, Instance = None, Response = None});
-    return chan
+    key <- rand;
+    let
+        val clientInfo = user ++ {Key = key, Channel = chan}
+    in
+        Sql.insert users (clientInfo ++ {Instance = None, Response = None});
+        return (projs clientInfo)
+    end
 
 fun instantiate [tf] job variant =
     {Instance = Some (serialize (@casesMapU [tf] [fn _ => int] fl
@@ -83,15 +90,20 @@ con respList t = list {Member : member, Response : t.2}
 
 fun cont user job resp =
     let
-        val group = user -- #Member
-        val member = user -- #Group
+        val group = projs user
+        val member = projs user
         val instance = instantiate job resp
     in
         respsq <- query1' (Sql.selectLookup users (group ++ instance))
-                          (fn {Member = member', Response = respzq} accq =>
-                              respz <- (if member' = member.Member
-                                        then Some (serialize resp)
-                                        else respzq);
+                          (fn {Member = member',
+                               Key = key',
+                               Response = respzq} accq =>
+                              respz <- (if not (key' = user.Key) then
+                                            None
+                                        else if member' = member.Member then
+                                            Some (serialize resp)
+                                        else
+                                            respzq);
                               acc <- accq;
                               (@casesDiagU [snd] [respList] [respList] fl
                                            (fn [t] resp acc =>
@@ -114,12 +126,12 @@ fun cont user job resp =
                     (mkCont (curry ask group)) resps
     end
 
-fun answer (user : {Group : group, Member : member}) job resp =
+fun answer (user : {Group : group, Member : member, Key : int}) job resp =
     rpc (cont user job resp)
 
-fun subscribeListener user listeners =
+fun subscribeListener (user : {Group : group, Member : member}) listeners =
     let
-        fun ls job =
+        fun ls key job =
             @mapNm [fn h => (h.2 -> tunit) -> h.1 -> tunit]
                    [fn hs h => h.1 -> tunit]
                    fl
@@ -127,16 +139,17 @@ fun subscribeListener user listeners =
                        [[nm] ~ others] _ (pf : equal _ _)
                        l0 =>
                        l0 (fn resp =>
-                              answer user job
+                              answer (user ++ {Key = key}) job
                                      (castL pf [fn hs => variant (map snd hs)]
                                             (make [nm] resp))))
                    listeners
     in
-        bind (rpc (mkChannel user))
-             (spawnListener (fn {Job = job, Request = req} =>
-                                (@@cases [map fst handlers] [_]
-                                         (ls job)
-                                         req)))
+        {Channel = chan, Key = key} <- rpc (init user);
+        spawnListener (fn {Job = job, Request = req} =>
+                          (@@cases [map fst handlers] [_]
+                                   (ls key job)
+                                   req))
+                      chan
     end
 
 type subReq (hs :: {(Type * Type)}) =

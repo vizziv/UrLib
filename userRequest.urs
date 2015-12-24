@@ -10,7 +10,8 @@ functor Make(M : sig
     val eq_member : eq member
     type request = variant (map fst handlers)
     val mkCont : ({Members : list member, Request : request} -> tunit)
-                 -> $(map (fn h => list {Member : member, Response : h.2} -> tunit)
+                 -> $(map (fn h =>
+                              list {Member : member, Response : h.2} -> tunit)
                           handlers)
 end) : sig
     (* TODO: make this not break when called concurrently. *)
