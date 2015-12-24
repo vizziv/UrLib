@@ -17,6 +17,8 @@ val castL : K --> a ::: K -> b ::: K
 val castR : K --> a ::: K -> b ::: K
             -> equal a b -> f :: (K -> Type) -> f a -> f b
 
+val bit : bool -> int
+
 val maximum : t ::: Type -> ord t -> t -> list t -> t
 val minimum : t ::: Type -> ord t -> t -> list t -> t
 

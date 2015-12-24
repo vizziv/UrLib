@@ -25,8 +25,8 @@ end) : sig
     (* The source is set to [Some _] whenever a request is recieved and to
        [None] after each submission. *)
     type submitRequest =
-         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
-                          M.handlers)
+        variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
+                     M.handlers)
     val subscribeSource : {Group : M.group, Member : M.member}
                           -> source (option submitRequest)
                           -> tunit

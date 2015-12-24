@@ -23,6 +23,8 @@ val refl : K --> a ::: K -> equal a a =
 fun castL [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastL
 fun castR [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastR
 
+fun bit b = if b then 1 else 0
+
 fun maximum [t] (_ : ord t) : t -> list t -> t = List.foldl max
 fun minimum [t] (_ : ord t) : t -> list t -> t = List.foldl min
 

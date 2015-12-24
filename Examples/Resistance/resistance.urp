@@ -1,4 +1,4 @@
-path root=..
+path root=../..
 database host=localhost dbname=ziv
 sql resistance.sql
 minHeap 65536

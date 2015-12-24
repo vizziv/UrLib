@@ -27,8 +27,8 @@ end) : sig
                                       M.handlers)
                             -> tunit
     type submitRequest =
-         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
-                 M.handlers)
+        variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
+                M.handlers)
     val subscribeSource : {Group : M.group, Member : M.member}
                           -> source (option submitRequest)
                           -> tunit
@@ -153,7 +153,7 @@ fun subscribeListener (user : {Group : group, Member : member}) listeners =
     end
 
 type subReq (hs :: {(Type * Type)}) =
-     variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1}) hs)
+    variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1}) hs)
 
 type submitRequest = subReq handlers
 

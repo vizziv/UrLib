@@ -6,10 +6,11 @@ fun buttons' rows =
             if shouldShow then
                 return (List.mapX (fn {Value = value, Onclick = onclick} =>
                                       <xml>
-                                        <button value={value}
-                                        onclick={fn _ =>
-                                                    set srcShouldShow False;
-                                                    onclick}/>
+                                        <button
+                                         value={value}
+                                         onclick={fn _ =>
+                                                     set srcShouldShow False;
+                                                     onclick}/>
                                       </xml>)
                                   rows)
             else
