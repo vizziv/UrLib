@@ -68,9 +68,25 @@ val mapNm : K --> tf1 :: (K -> Type) -> tf2 :: ({K} -> K -> Type)
                 -> tf1 t -> tf2 ([nm = t] ++ others) t)
             -> $(map tf1 r) -> $(map (tf2 r) r)
 
-val casesExec : r ::: {Type} -> folder r
-                -> m ::: (Type -> Type) -> monad m
-                -> variant (map m r) -> m (variant r)
+structure Functor : sig
+    class t :: (Type -> Type) -> Type
+    val mk : f ::: (Type -> Type)
+             -> (a ::: Type -> b ::: Type -> (a -> b) -> f a -> f b)
+             -> t f
+    val mp : f ::: (Type -> Type) -> t f ->
+             a ::: Type -> b ::: Type -> (a -> b) -> f a -> f b
+    val monad : f ::: (Type -> Type) -> monad f -> t f
+    val record : nm ::: Name -> ts ::: {Type} -> [[nm] ~ ts]
+                 => t (fn t => $([nm = t] ++ ts))
+    val variant : nm ::: Name -> ts ::: {Type} -> [[nm] ~ ts] => folder ts
+                  -> t (fn t => variant ([nm = t] ++ ts))
+    val compose : f ::: (Type -> Type) -> g ::: (Type -> Type)
+                  -> t f -> t g -> t (compose f g)
+end
+
+val casesFunctor : r ::: {Type} -> folder r
+                   -> f ::: (Type -> Type) -> Functor.t f
+                   -> variant (map f r) -> f (variant r)
 
 val casesMap : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
                -> r ::: {K} -> folder r
