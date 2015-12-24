@@ -9,13 +9,17 @@ functor Make(M : sig
     val sql_member : sql_injectable_prim member
     val eq_member : eq member
     type request = variant (map fst handlers)
-    val mkCont : ({Members : list member, Request : request} -> tunit)
+    val mkCont : group
+                 -> ({Members : option (list member), Request : request}
+                     -> tunit)
                  -> $(map (fn h =>
                               list {Member : member, Response : h.2} -> tunit)
                           handlers)
 end) : sig
     (* TODO: make this not break when called concurrently. *)
-    val ask : {Group : M.group, Members : list M.member, Request : M.request}
+    val ask : {Group : M.group,
+               Members : option (list M.member),
+               Request : M.request}
               -> tunit
     (* Client: one-time setup (pick just one per user). *)
     val subscribeListener : {Group : M.group, Member : M.member}

@@ -44,7 +44,7 @@ fun distinct [t] (_ : eq t) (_ : ord t) (xs : list t) =
 
 fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
 
-fun casesGet [K] [t ::: Type] [r ::: {K}] (fl : folder r) =
+fun casesGet [K] [r ::: {K}] (fl : folder r) [t ::: Type] =
     @@cases [map (fn _ => t) r] [t]
             (@map0 [fn _ => t -> t] (fn [ignore ::_] => id) fl)
 
@@ -151,6 +151,13 @@ fun mapNm [K] [tf1 :: K -> Type] [tf2 :: {K} -> K -> Type]
                end)
            (fn [todo :: {K}] [[] ~ todo] _ _ => {FlDone = Folder.nil, MapF = fn {} => {}})
            fl [[]] ! Folder.nil refl).MapF
+
+fun casesExec [r ::: {Type}] (fl : folder r)
+              [m ::: Type -> Type] (monad : monad m) =
+    @@cases [map m r] [m (variant r)]
+            (@mapNm0 [fn r t => m t -> m (variant r)] fl
+                     (fn [others ::_] [nm ::_] [t] [[nm] ~ others ] _ _ =>
+                         Monad.mp (make [nm])))
 
 fun casesMap [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
              [r ::: {K}] (fl : folder r)

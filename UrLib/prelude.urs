@@ -29,7 +29,7 @@ val distinct : t ::: Type -> eq t -> ord t -> list t -> bool
 val cases : ts ::: {Type} -> u ::: Type
             -> $(map (fn t => t -> u) ts) -> variant ts -> u
 
-val casesGet : K --> t ::: Type -> r ::: {K} -> folder r
+val casesGet : K --> r ::: {K} -> folder r -> t ::: Type
                -> variant (map (fn _ => t) r) -> t
 
 val proj : nm :: Name -> t ::: Type -> drop ::: {Type} -> [[nm] ~ drop]
@@ -67,6 +67,10 @@ val mapNm : K --> tf1 :: (K -> Type) -> tf2 :: ({K} -> K -> Type)
                 -> equal r ([nm = t] ++ others)
                 -> tf1 t -> tf2 ([nm = t] ++ others) t)
             -> $(map tf1 r) -> $(map (tf2 r) r)
+
+val casesExec : r ::: {Type} -> folder r
+                -> m ::: (Type -> Type) -> monad m
+                -> variant (map m r) -> m (variant r)
 
 val casesMap : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
                -> r ::: {K} -> folder r

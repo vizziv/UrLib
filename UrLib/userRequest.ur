@@ -15,12 +15,16 @@ functor Make(M : sig
     val sql_member : sql_injectable_prim member
     val eq_member : eq member
     type request = variant (map fst handlers)
-    val mkCont : ({Members : list member, Request : request} -> tunit)
+    val mkCont : group
+                 -> ({Members : option (list member), Request : request}
+                     -> tunit)
                  -> $(map (fn h =>
                               list {Member : member, Response : h.2} -> tunit)
                           handlers)
 end) : sig
-    val ask : {Group : M.group, Members : list M.member, Request : M.request}
+    val ask : {Group : M.group,
+               Members : option (list M.member),
+               Request : M.request}
               -> tunit
     val subscribeListener : {Group : M.group, Member : M.member}
                              -> $(map (fn h => (h.2 -> tunit) -> h.1 -> tunit)
@@ -71,9 +75,13 @@ fun instantiate [tf] job variant =
 
 fun ask req =
     let
-        val cond = (SQL T.Group = {[req.Group]}
-                    AND {Sql.lookups (List.mp (snoc {} [#Member])
-                                              req.Members)})
+        val cond' = (SQL T.Group = {[req.Group]})
+        val cond =
+            case req.Members of
+                None => cond'
+              | Some members =>
+                (SQL {cond'}
+                 AND {Sql.lookups (List.mp (snoc {} [#Member]) members)})
     in
         job <- nextval jobs;
         let
@@ -123,7 +131,7 @@ fun cont user job resp =
                        {Instance = None, Response = None}
                        (Sql.lookup group);
             @@cases [map respList handlers] [_]
-                    (mkCont (curry ask group)) resps
+                    (mkCont group.Group (curry ask group)) resps
     end
 
 fun answer (user : {Group : group, Member : member, Key : int}) job resp =
