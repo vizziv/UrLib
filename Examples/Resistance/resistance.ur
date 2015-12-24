@@ -9,32 +9,38 @@ con game =
 
 con team = [Team = list int]
 
-val resps =
- fn [t] =>
-    @@List.mp [{Response : _, Member : t}] [t] (proj [#Response])
+val countTrue : list {Response : bool, Member : int} -> int =
+    List.foldl (fn resp acc => bit resp.Response + acc) 0
 
 fun nextLeader xs = mod (xs.Leader + 1) xs.NumPlayers
 
-fun passed xs votes =
-    let
-        val vs : list bool = resps votes
-    in
-        error <xml>TODO</xml>
-    end
+fun missionSize xs =
+    case List.nth (case xs.NumPlayers of
+                       5 => 2::3::2::3::3::[]
+                     | 6 => 2::3::4::3::4::[]
+                     | 7 => 2::3::3::4::4::[]
+                     | _ => 3::4::4::5::5::[])
+                  xs.Round of
+        Some n => n
+      | None => impossible
+
+fun passed xs votes = countTrue votes > List.length votes
 
 fun succeeded xs actions =
-    let
-        val as : list bool = resps actions
-    in
-        error <xml>TODO</xml>
-    end
+    countTrue actions > bit (xs.Round = 3 && xs.NumPlayers < 7)
+
+fun team xs proposals =
+    case proposals of
+        {Member = player, Response = team} :: [] =>
+        if player = xs.Leader then team else impossible
+      | _ => impossible
 
 structure F = Fsm.Make(struct
     type label = int
     val fsm =
         {Proposal = fn {State = xs : $game,
-                        Effect = players} =>
-                       make [#Voting] (xs ++ {Team = players}),
+                        Effect = proposals} =>
+                       make [#Voting] (xs ++ {Team = team xs proposals}),
          Voting = fn {State = xs : $(game ++ team),
                       Effect = votes} =>
                      if passed xs votes then
@@ -50,4 +56,9 @@ structure F = Fsm.Make(struct
                              Attempt = 0,
                              Leader = nextLeader xs}
                             ++ projs xs)}
+end)
+
+structure U = UserRequest.Make(struct
+    con handlers = _
+    val mkCont =
 end)

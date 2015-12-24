@@ -23,6 +23,10 @@ val refl : K --> a ::: K -> equal a a =
 fun castL [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastL
 fun castR [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastR
 
+val impossible : t ::: Type -> t =
+ fn [t] =>
+    error <xml>Nothing, not even this error, is impossible!</xml>
+
 fun bit b = if b then 1 else 0
 
 fun maximum [t] (_ : ord t) : t -> list t -> t = List.foldl max
