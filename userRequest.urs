@@ -16,8 +16,17 @@ end) : sig
     (* TODO: make this not break when called concurrently. *)
     val ask : {Group : M.group, Members : list M.member, Request : M.request}
               -> tunit
-    (* Client: one-time setup with response functions. *)
-    val listen : {Group : M.group, Member : M.member}
-                 -> $(map (fn h => (h.2 -> tunit) -> h.1 -> tunit) M.handlers)
-                 -> tunit
+    (* Client: one-time setup (pick just one per user). *)
+    val subscribeListener : {Group : M.group, Member : M.member}
+                            -> $(map (fn h => (h.2 -> tunit) -> h.1 -> tunit)
+                                     M.handlers)
+                            -> tunit
+    (* The source is set to [Some _] whenever a request is recieved and to
+       [None] after each submission. *)
+    type submitRequest =
+         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
+                          M.handlers)
+    val subscribeSource : {Group : M.group, Member : M.member}
+                          -> source (option submitRequest)
+                          -> tunit
 end

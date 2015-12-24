@@ -19,13 +19,18 @@ functor Make(M : sig
                  -> $(map (fn h => list {Member : member, Response : h.2} -> tunit)
                           handlers)
 end) : sig
-    (* Server: make a request, probably just once per group. *)
     val ask : {Group : M.group, Members : list M.member, Request : M.request}
               -> tunit
-    (* Client: one-time setup with response functions. *)
-    val listen : {Group : M.group, Member : M.member}
-                 -> $(map (fn h => (h.2 -> tunit) -> h.1 -> tunit) M.handlers)
-                 -> tunit
+    val subscribeListener : {Group : M.group, Member : M.member}
+                             -> $(map (fn h => (h.2 -> tunit) -> h.1 -> tunit)
+                                      M.handlers)
+                            -> tunit
+    type submitRequest =
+         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
+                 M.handlers)
+    val subscribeSource : {Group : M.group, Member : M.member}
+                          -> source (option submitRequest)
+                          -> tunit
 end = struct
 
 open M
@@ -112,7 +117,7 @@ fun cont user job resp =
 fun answer (user : {Group : group, Member : member}) job resp =
     rpc (cont user job resp)
 
-fun listen user listeners =
+fun subscribeListener user listeners =
     let
         fun ls job =
             @mapNm [fn h => (h.2 -> tunit) -> h.1 -> tunit]
@@ -134,31 +139,37 @@ fun listen user listeners =
                                          req)))
     end
 
-type submitRequest h = {Submit : h.2 -> tunit, Request : h.1}
-type submitRequests (hs :: {(Type * Type)}) = variant (map submitRequest hs)
+type subReq (hs :: {(Type * Type)}) =
+     variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1}) hs)
 
-fun signal (user : {Group : group, Member : member}) =
-    (src : source (option (submitRequests handlers))) <- source None;
-    listen user
-           (@mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] fl
-                    (fn [others ::_] [nm ::_] [h] [[nm] ~ others]
-                        _ (pf : equal _ _)
-                        (submit : h.2 -> tunit) (req : h.1) =>
-                        let
-                            val cast =
-                                castL pf
-                                      (* Using [submitRequests] causes hang! *)
-                                      [fn hs =>
-                                          variant
-                                              (map (fn h =>
-                                                       {Submit : h.2 -> tunit,
-                                                        Request : h.1})
-                                                       hs)]
-                        in
-                            set src
-                                (Some (cast (make [nm] {Submit = submit,
-                                                        Request = req})))
-                        end));
-    return (Basis.signal src)
+type submitRequest = subReq handlers
+
+fun subscribeSource (user : {Group : group, Member : member})
+                    (src : source (option submitRequest)) =
+    let
+        fun f [others ::_] [nm ::_] [h] [[nm] ~ others] _ (pf : equal _ _)
+              (submit : h.2 -> tunit) (req : h.1) =
+            let
+                val cast =
+                    castL pf
+                          (* Using [subReq] hangs the compiler! *)
+                          [fn hs =>
+                              variant (map (fn h =>
+                                               {Submit : h.2 -> tunit,
+                                                Request : h.1})
+                                           hs)]
+            in
+                set src
+                    (Some (cast (make [nm]
+                                      {Submit = fn resp =>
+                                                   set src None;
+                                                   submit resp,
+                                       Request = req})))
+            end
+        val listeners =
+            @mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] fl f
+    in
+        subscribeListener user listeners
+    end
 
 end

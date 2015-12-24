@@ -1,3 +1,5 @@
+open Prelude
+
 structure Ureq = UserRequest.Make(struct
     con handlers = [A = (int, int), B = (int, int)]
     type group = int
@@ -22,32 +24,36 @@ val start = Ureq.ask {Group = 0,
                       Request = (make [#A] 9001)}
 
 fun test _ =
+    srvqSrc <- source None;
     let
-        fun sgl answerqSrc =
-            answerq <- signal answerqSrc;
-            case answerq of
-                None => return <xml>Nothing to do</xml>
-              | Some answer =>
-                return <xml>
-                  Submit: {Ui.button {Value = "Click me!", Onclick = answer}}
-                </xml>
-        fun handlers answerqSrc =
-            {A = fn answer n => set answerqSrc (Some (answer (n+5))),
-             B = fn answer n => answer (n-2)}
-        val mkForm =
-            answerqSrc <- source None;
-            return <xml>
-              <dyn signal={sgl answerqSrc}/>
-              {Ui.button {Value = "Start listening",
-                          Onclick =
-                          Ureq.listen {Group = 0, Member = 0} (handlers answerqSrc);
-                          rpc start}}
-            </xml>
+        fun render srvq =
+            case srvq of
+                None => <xml>Nothing to do.</xml>
+              | Some srv =>
+                cases {A = fn sr =>
+                              <xml>
+                                A {[sr.Request]}:
+                                {Ui.button {Value = "Click me!",
+                                            Onclick =
+                                            sr.Submit (sr.Request + 5)}}
+                              </xml>,
+                       B = fn sr =>
+                              <xml>
+                                B {[sr.Request]}:
+                                {Ui.button {Value = "Click me!",
+                                            Onclick =
+                                            sr.Submit (sr.Request - 3)}}
+                              </xml>}
+                      srv
     in
         return <xml>
           <body>
             <h1>ClientRequest Test</h1>
-            <active code={mkForm}/>
+            <dyn signal={Monad.mp render (signal srvqSrc)}/>
+            {Ui.button {Value = "Start listening",
+                        Onclick =
+                        Ureq.subscribeSource {Group = 0, Member = 0} srvqSrc;
+                        rpc start}}
           </body>
         </xml>
     end
