@@ -1,13 +1,7 @@
+path root=..
 database host=localhost dbname=ziv
 sql test.sql
 minHeap 65536
+library $root/UrLib
 
-$/list
-$/option
-$/monad
-prelude
-misc
-sql
-ui
-userRequest
 test

@@ -7,15 +7,17 @@ fun plural (n : int) (x : string) =
         val last = strsub x lenMinus1
     in
         show n ^ " " ^
-        if n = 1
-        then x
-        else case last of
-                 #"s" => x ^ "es"
-               | #"x" => x ^ "es"
-               | #"y" => if vowel (strsub x (lenMinus1 - 1))
-                         then x ^ "s"
-                         else substring x 0 lenMinus1 ^ "ies"
-               | _ => x ^ "s"
+        if n = 1 then
+            x
+        else
+            case last of
+                #"s" => x ^ "es"
+              | #"x" => x ^ "es"
+              | #"y" => if vowel (strsub x (lenMinus1 - 1)) then
+                            x ^ "s"
+                        else
+                            substring x 0 lenMinus1 ^ "ies"
+              | _ => x ^ "s"
     end
 
 fun stringList (xs : list string) =
