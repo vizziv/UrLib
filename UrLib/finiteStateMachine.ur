@@ -1,7 +1,3 @@
-(* Fsm = Finite State Machine *)
-
-(* TODO: use better names than "state" repeated several times! *)
-
 open Prelude
 
 type t (states :: {(Type * Type)}) =

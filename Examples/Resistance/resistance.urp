@@ -4,4 +4,4 @@ sql resistance.sql
 minHeap 65536
 library $root/UrLib
 
-resistance
+game
