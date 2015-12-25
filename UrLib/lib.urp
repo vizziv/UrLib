@@ -5,5 +5,5 @@ prelude
 misc
 sql
 ui
-finiteStateMachine
+stateMachine
 userRequest

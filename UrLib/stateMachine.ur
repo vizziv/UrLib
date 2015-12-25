@@ -4,13 +4,15 @@ type t (states :: {(Type * Type)}) =
     $(map (fn s => {State : s.1, Effect : s.2} -> variant (map fst states))
           states)
 
-functor Make(M : sig
+signature Params = sig
     type label
     val sql_label : sql_injectable label
     con states :: {(Type * Type)}
     val fl : folder states
-    val fsm : t states
-end) : sig
+    val sm : t states
+end
+
+functor Make(M : Params) : sig
     type state = variant (map fst M.states)
     type effect = variant (map snd M.states)
     val init : {Label : M.label, State : state} -> transaction state
@@ -22,7 +24,7 @@ open M
 type state = variant (map fst M.states)
 type effect = variant (map snd M.states)
 
-table fsms : {Label : label, State : serialized state}
+table sms : {Label : label, State : serialized state}
 
 fun cont (x : state) (y : effect) =
     Option.mp (@casesGet fl)
@@ -33,22 +35,22 @@ fun cont (x : state) (y : effect) =
                                (fn [s] f state effect =>
                                    f {State = state, Effect = effect})
                                fl
-                               fsm)
+                               sm)
                           x y)
 
 fun init {Label = label, State = state} =
-    Sql.insert fsms {Label = label, State = serialize state};
+    Sql.insert sms {Label = label, State = serialize state};
     return state
 
 fun step {Label = label, Effect = effect} =
     let
         val cond = Sql.lookup {Label = label}
     in
-        {State = statez} <- oneRow1 (Sql.select1 fsms cond);
+        {State = statez} <- oneRow1 (Sql.select1 sms cond);
         case cont (deserialize statez) effect of
             None => return None
           | Some state =>
-            Sql.update fsms {State = serialize state} cond;
+            Sql.update sms {State = serialize state} cond;
             return (Some state)
     end
 

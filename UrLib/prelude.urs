@@ -76,10 +76,10 @@ structure Functor : sig
     val mp : f ::: (Type -> Type) -> t f ->
              a ::: Type -> b ::: Type -> (a -> b) -> f a -> f b
     val monad : f ::: (Type -> Type) -> monad f -> t f
-    val record : nm ::: Name -> ts ::: {Type} -> [[nm] ~ ts]
-                 => t (fn t => $([nm = t] ++ ts))
-    val variant : nm ::: Name -> ts ::: {Type} -> [[nm] ~ ts] => folder ts
-                  -> t (fn t => variant ([nm = t] ++ ts))
+    val field : nm :: Name -> ts ::: {Type} -> [[nm] ~ ts]
+                => t (fn t => $([nm = t] ++ ts))
+    val choice : nm :: Name -> ts ::: {Type} -> [[nm] ~ ts] => folder ts
+                 -> t (fn t => variant ([nm = t] ++ ts))
     val compose : f ::: (Type -> Type) -> g ::: (Type -> Type)
                   -> t f -> t g -> t (compose f g)
 end

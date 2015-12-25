@@ -160,10 +160,10 @@ structure Functor  : sig
     val mp : f ::: (Type -> Type) -> t f ->
              a ::: Type -> b ::: Type -> (a -> b) -> f a -> f b
     val monad : f ::: (Type -> Type) -> monad f -> t f
-    val record : nm ::: Name -> ts ::: {Type} -> [[nm] ~ ts]
-                 => t (fn t => $([nm = t] ++ ts))
-    val variant : nm ::: Name -> ts ::: {Type} -> [[nm] ~ ts] => folder ts
-                  -> t (fn t => variant ([nm = t] ++ ts))
+    val field : nm :: Name -> ts ::: {Type} -> [[nm] ~ ts]
+                => t (fn t => $([nm = t] ++ ts))
+    val choice : nm :: Name -> ts ::: {Type} -> [[nm] ~ ts] => folder ts
+                 -> t (fn t => variant ([nm = t] ++ ts))
     val compose : f ::: (Type -> Type) -> g ::: (Type -> Type)
                   -> t f -> t g -> t (compose f g)
 end = struct
@@ -176,11 +176,11 @@ val mp = fn [f] => id
 
 val monad = @@Monad.mp
 
-fun record [nm] [ts] [[nm] ~ ts] [a] [b]
-           (f : a -> b) (r : $([nm = a] ++ ts)) =
+fun field [nm ::_] [ts] [[nm] ~ ts] [a] [b]
+          (f : a -> b) (r : $([nm = a] ++ ts)) =
     r -- nm ++ {nm = f r.nm}
 
-fun variant [nm] [ts] [[nm] ~ ts] (fl : folder ts) [a] [b] (f : a -> b)
+fun choice [nm ::_] [ts] [[nm] ~ ts] (fl : folder ts) [a] [b] (f : a -> b)
     : variant ([nm = a] ++ ts) -> variant ([nm = b] ++ ts) =
     @@cases [[nm = a] ++ ts] [_]
             ((@mapNm0 [fn r t => t -> variant r]

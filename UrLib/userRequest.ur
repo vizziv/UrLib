@@ -6,7 +6,7 @@ TODO:
 
 open Prelude
 
-functor Make(M : sig
+signature Params = sig
     con handlers :: {(Type * Type)}
     val fl : folder handlers
     type group
@@ -21,7 +21,9 @@ functor Make(M : sig
                  -> $(map (fn h =>
                               list {Member : member, Response : h.2} -> tunit)
                           handlers)
-end) : sig
+end
+
+functor Make(M : Params) : sig
     val ask : {Group : M.group,
                Members : option (list M.member),
                Request : M.request}

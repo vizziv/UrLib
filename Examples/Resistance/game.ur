@@ -38,7 +38,7 @@ fun team xs proposals =
         if player = xs.Leader then team else impossible
       | _ => impossible
 
-val fsm =
+val sm =
     {Proposal = fn {State = xs,
                     Effect = proposals} =>
                    make [#Voting] ({Team = team xs proposals} ++ xs),
@@ -58,13 +58,15 @@ val fsm =
                          Leader = nextLeader xs}
                         ++ projs xs)}
 
-structure Fsm = FiniteStateMachine.Make(struct
+structure Sm = StateMachine.Make(struct
     type label = int
-    val fsm = fsm
+    val sm = sm
 end)
 
-fun translate (label : int) : Fsm.state -> transaction _ =
-    compose casesExec
+type req = _
+
+fun translate (group : int) : Sm.state -> transaction req =
+    compose (@casesFunctor _ (@Functor.compose _ (Functor.field [#Request])))
             (casesMap [fst] [snd]
                       {Proposal = fn xs =>
                                      return {Members = Some (xs.Leader :: []),
@@ -76,15 +78,28 @@ fun translate (label : int) : Fsm.state -> transaction _ =
                                     return {Members = Some xs.Team,
                                             Request = xs.Team}})
 
-(* fun mkCont group ask = *)
-(*     mapNm0 [fn h => list {Member : member, Response : h.2} -> tunit] *)
-(*            (fn [h ::_] resps => *)
-(*                Fsm. *)
-(*                    bind (translate)) *)
+con handlers :: {(Type * Type)} = _
 
-(* structure Ureq = UserRequest.Make(struct *)
-(*     con handlers = _ *)
-(*     type group = int *)
-(*     type member = int *)
-(*     val mkCont = mkCont *)
-(* end) *)
+fun mkCont (group : int) (ask : req -> tunit) =
+    @mapNm0 [fn hs h => list {Member : int, Response : h.2} -> tunit]
+            (_ : folder handlers)
+            (fn [others ::_] [nm ::_] [h] [[nm] ~ others] _
+                (pf : equal handlers ([nm = h] ++ others)) resps =>
+                stateq <- Sm.step {Label = group,
+                                   Effect = castL pf
+                                                  [fn hs =>
+                                                      variant (map (fn h =>
+                                                                       list {Member : int,
+                                                                             Response : h.2})
+                                                                   hs)]
+                                                  (make [nm] resps)};
+                case stateq of
+                    None => impossible
+                  | Some state => bind (translate group state) ask)
+
+structure Ureq = UserRequest.Make(struct
+    con handlers = handlers
+    type group = int
+    type member = int
+    val mkCont = mkCont
+end)
