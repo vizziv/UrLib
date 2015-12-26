@@ -52,6 +52,10 @@ fun proj [nm ::_] [t] [drop] [[nm] ~ drop] (xs : $([nm = t] ++ drop)) = xs.nm
 
 fun projs [keep] [drop] [keep ~ drop] (xs : $(keep ++ drop)) = xs --- drop
 
+fun rename [nm1 ::_] [nm2 ::_] [t] [ts] [[nm1] ~ ts] [[nm2] ~ ts]
+           (xs : $([nm1 = t] ++ ts)) =
+    xs -- nm1 ++ {nm2 = xs.nm1}
+
 fun curry [have] [need] [t] [have ~ need]
           (f : $(have ++ need) -> t) (xs : $have) (ys : $need) =
     f (xs ++ ys)

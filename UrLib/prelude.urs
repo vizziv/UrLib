@@ -38,6 +38,10 @@ val proj : nm :: Name -> t ::: Type -> drop ::: {Type} -> [[nm] ~ drop]
 val projs : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
             => $(keep ++ drop) -> $keep
 
+val rename : nm1 :: Name -> nm2 :: Name -> t ::: Type -> ts ::: {Type}
+             -> [[nm1] ~ ts] => [[nm2] ~ ts]
+             => $([nm1 = t] ++ ts) -> $([nm2 = t] ++ ts)
+
 val curry : have ::: {Type} -> need ::: {Type} -> t ::: Type -> [have ~ need]
             => ($(have ++ need) -> t) -> $have -> $need -> t
 

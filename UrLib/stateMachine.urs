@@ -2,17 +2,26 @@ type t (states :: {(Type * Type)}) =
     $(map (fn s => {State : s.1, Effect : s.2} -> variant (map fst states))
           states)
 
-signature Params = sig
-    type label
-    val sql_label : sql_injectable label
+signature Types = sig
     con states :: {(Type * Type)}
+    type label
+    type state = variant (map fst states)
+    type effect = variant (map snd states)
+end
+
+signature Input = sig
+    include Types
     val fl : folder states
+    val sql_label : sql_injectable label
     val sm : t states
 end
 
-functor Make(M : Params) : sig
-    type state = variant (map fst M.states)
-    type effect = variant (map snd M.states)
-    val init : {Label : M.label, State : state} -> transaction state
-    val step : {Label : M.label, Effect : effect} -> transaction (option state)
+signature Output = sig
+    include Types
+    val init : {Label : label, State : state} -> transaction state
+    val step : {Label : label, Effect : effect} -> transaction (option state)
 end
+
+functor Make(M : Input) : Output
+    where con states = M.states
+    where type label = M.label
