@@ -33,16 +33,16 @@ fun test _ =
                 cases {A = fn sr =>
                               <xml>
                                 A {[sr.Request]}:
-                                {Ui.button {Value = "Click me!",
-                                            Onclick =
-                                            sr.Submit (sr.Request + 5)}}
+                                {Ui.submitButton
+                                     {Value = "Click me!",
+                                      Onclick = sr.Submit (sr.Request + 5)}}
                               </xml>,
                        B = fn sr =>
                               <xml>
                                 B {[sr.Request]}:
-                                {Ui.button {Value = "Click me!",
-                                            Onclick =
-                                            sr.Submit (sr.Request - 3)}}
+                                {Ui.submitButton
+                                     {Value = "Click me!",
+                                      Onclick = sr.Submit (sr.Request - 3)}}
                               </xml>}
                       srv
     in
@@ -50,8 +50,8 @@ fun test _ =
           <body>
             <h1>ClientRequest Test</h1>
             <dyn signal={Monad.mp render (Ureq.value connection)}/>
-            {Ui.button {Value = "Start listening",
-                        Onclick = Ureq.listen connection; rpc start}}
+            {Ui.submitButton {Value = "Start listening",
+                              Onclick = Ureq.listen connection; rpc start}}
           </body>
         </xml>
     end

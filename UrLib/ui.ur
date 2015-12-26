@@ -1,24 +1,30 @@
-fun buttons' rows =
+(* TODO: investigate behavior with @ and switching constraint with [r]. *)
+fun submitButtons' [ctx] [r] [ctx ~ body] (fl : folder r) rows
+    : transaction (xml (ctx ++ body) [] []) =
     srcShouldShow <- source True;
     let
         val sgl =
             shouldShow <- signal srcShouldShow;
             if shouldShow then
-                return (List.mapX (fn {Value = value, Onclick = onclick} =>
-                                      <xml>
-                                        <button
-                                         value={value}
-                                         onclick={fn _ =>
-                                                     set srcShouldShow False;
-                                                     onclick}/>
-                                      </xml>)
-                                  rows)
+                return (@mapUX [_] [ctx ++ body]
+                               (fn [nm ::_] [rest ::_] [_~_]
+                                   {Value = value, Onclick = onclick} =>
+                                   <xml>
+                                     <button
+                                     value={value}
+                                     onclick={fn _ =>
+                                                 set srcShouldShow False;
+                                                 onclick}/>
+                                   </xml>)
+                               fl
+                              rows)
             else
                 return <xml></xml>
     in
         return <xml><dyn signal={sgl}/></xml>
     end
 
-fun buttons rows : xbody = <xml><active code={buttons' rows}/></xml>
+fun submitButtons [r] (fl : folder r) rows : xbody =
+    <xml><active code={@submitButtons' ! fl rows}/></xml>
 
-fun button row : xbody = buttons (row :: [])
+fun submitButton row : xbody = submitButtons {Button = row}
