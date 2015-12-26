@@ -24,7 +24,7 @@ val start = Ureq.ask {Group = 0,
                       Request = (make [#A] 9001)}
 
 fun test _ =
-    srvqSrc <- source None;
+    connection <- Ureq.connect {Group = 0, Member = 0};
     let
         fun render srvq =
             case srvq of
@@ -49,11 +49,9 @@ fun test _ =
         return <xml>
           <body>
             <h1>ClientRequest Test</h1>
-            <dyn signal={Monad.mp render (signal srvqSrc)}/>
+            <dyn signal={Monad.mp render (Ureq.value connection)}/>
             {Ui.button {Value = "Start listening",
-                        Onclick =
-                        Ureq.subscribeSource {Group = 0, Member = 0} srvqSrc;
-                        rpc start}}
+                        Onclick = Ureq.listen connection; rpc start}}
           </body>
         </xml>
     end

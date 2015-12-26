@@ -29,13 +29,13 @@ end
 signature Output = sig
     include Types
     val init : {Group : group, State : variant (map fst states)} -> tunit
+    type connection
     type submitRequest =
-         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
-                      handlerStates)
-    val subscribeSource : {Group : group, Member : member}
-                          -> source (option submitRequest)
-                          -> tunit
-
+        variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
+                     handlers)
+    val connect : {Group : group, Member : member} -> transaction connection
+    val listen : connection -> tunit
+    val value : connection -> signal (option submitRequest)
 end
 
 functor Make(M : Input) : Output
@@ -79,7 +79,7 @@ fun mkCont (group : group) (ask : req -> tunit) =
                     None => impossible
                   | Some state => bind (request group state) ask)
 
-structure Ureq = UserRequest.Make(struct
+open UserRequest.Make(struct
     con handlers = M.handlers
     val fl = @Folder.mp fl
     type group = M.group
@@ -89,10 +89,6 @@ end)
 
 fun init gs =
     state <- Sm.init (rename [#Group] [#Label] gs);
-    bind (request gs.Group state) (curry Ureq.ask (projs gs))
-
-type submitRequest = Ureq.submitRequest
-
-val subscribeSource = Ureq.subscribeSource
+    bind (request gs.Group state) (curry ask (projs gs))
 
 end

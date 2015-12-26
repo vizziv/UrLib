@@ -41,8 +41,8 @@ fun team xs proposals =
 val sm : StateMachine.t _ =
     {Proposal =
       fn {State = xs, Effect = proposals} =>
-         make [#Voting] ({Team = team xs proposals} ++ xs),
-     Voting =
+         make [#Vote] ({Team = team xs proposals} ++ xs),
+     Vote =
       fn {State = xs, Effect = votes} =>
          if passed xs votes then
              make [#Mission] xs
@@ -61,7 +61,7 @@ fun mkRequest (group : int) =
     {Proposal =
       fn xs =>
          return {Members = Some (xs.Leader :: []), Request = missionSize xs},
-     Voting =
+     Vote =
       fn xs =>
          return {Members = @@None [list int], Request = xs.Team},
      Mission =

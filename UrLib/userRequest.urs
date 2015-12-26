@@ -23,24 +23,22 @@ end
 
 signature Output = sig
     include Types
-    (* TODO: make this not break when called concurrently. *)
+    (* Server-side initialization for each group. *)
     val ask : {Group : group,
                Members : option (list member),
                Request : request}
               -> tunit
-    (* Client: one-time setup (pick just one per user). *)
-    val subscribeListener : {Group : group, Member : member}
-                            -> $(map (fn h => (h.2 -> tunit) -> h.1 -> tunit)
-                                     handlers)
-                            -> tunit
-    (* The source is set to [Some _] whenever a request is recieved and to
-       [None] after each submission. *)
+    type connection
     type submitRequest =
         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
                      handlers)
-    val subscribeSource : {Group : group, Member : member}
-                          -> source (option submitRequest)
-                          -> tunit
+    (* Server-side initialization for each user. *)
+    val connect : {Group : group, Member : member} -> transaction connection
+    (* Client-side initialization for each user.*)
+    val listen : connection -> tunit
+    (* The signal is set to [Some _] whenever a request is recieved and to
+       [None] after each submission. *)
+    val value : connection -> signal (option submitRequest)
 end
 
 functor Make(M : Input) : Output

@@ -2,6 +2,7 @@
 TODO:
   - Make [ask] not break when called twice concurrently with the same group.
   - Double check database cleanup needs.
+  - Allow reconnection by calling [connect] again.
 *)
 
 open Prelude
@@ -29,30 +30,23 @@ end
 
 signature Output = sig
     include Types
-    (* TODO: make this not break when called concurrently. *)
     val ask : {Group : group,
                Members : option (list member),
                Request : request}
               -> tunit
-    (* Client: one-time setup (pick just one per user). *)
-    val subscribeListener : {Group : group, Member : member}
-                            -> $(map (fn h => (h.2 -> tunit) -> h.1 -> tunit)
-                                     handlers)
-                            -> tunit
-    (* The source is set to [Some _] whenever a request is recieved and to
-       [None] after each submission. *)
+    type connection
     type submitRequest =
         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
                      handlers)
-    val subscribeSource : {Group : group, Member : member}
-                          -> source (option submitRequest)
-                          -> tunit
+    val connect : {Group : group, Member : member} -> transaction connection
+    val listen : connection -> tunit
+    val value : connection -> signal (option submitRequest)
 end
 
-functor Make(M : Input) : (Output
+functor Make(M : Input) : Output
     where con handlers = M.handlers
     where type group = M.group
-    where type member = M.member) = struct
+    where type member = M.member = struct
 
 open M
 
@@ -75,14 +69,23 @@ table users :
        Response : option (serialized response)}
           PRIMARY KEY {{pkeyGroupMember}}
 
-fun init user : transaction {Channel : channel _, Key : int} =
+type connection =
+     {Group : _,
+      Member : _,
+      Key : _,
+      Channel : channel _,
+      Source : source _}
+
+fun connect user : transaction connection =
     chan <- channel;
     key <- rand;
     let
-        val clientInfo = user ++ {Key = key, Channel = chan}
+        val row = {Key = key, Channel = chan, Instance = None, Response = None}
+                  ++ user
     in
-        Sql.insert users (clientInfo ++ {Instance = None, Response = None});
-        return (projs clientInfo)
+        Sql.insert users row;
+        src <- source None;
+        return (projs row ++ {Source = src})
     end
 
 fun instantiate [tf] job variant =
@@ -153,9 +156,10 @@ fun cont user job resp =
 fun answer (user : {Group : group, Member : member, Key : int}) job resp =
     rpc (cont user job resp)
 
-fun subscribeListener (user : {Group : group, Member : member}) listeners =
+fun subscribeListeners connection listeners =
     let
-        fun ls key job =
+        val user = connection --- [Channel = _, Source = _]
+        fun ls job =
             @mapNm [fn h => (h.2 -> tunit) -> h.1 -> tunit]
                    [fn hs h => h.1 -> tunit]
                    fl
@@ -163,17 +167,16 @@ fun subscribeListener (user : {Group : group, Member : member}) listeners =
                        [[nm] ~ others] _ (pf : equal _ _)
                        l0 =>
                        l0 (fn resp =>
-                              answer (user ++ {Key = key}) job
+                              answer user job
                                      (castL pf [fn hs => variant (map snd hs)]
                                             (make [nm] resp))))
                    listeners
     in
-        {Channel = chan, Key = key} <- rpc (init user);
         spawnListener (fn {Job = job, Request = req} =>
                           (@@cases [map fst handlers] [_]
-                                   (ls key job)
+                                   (ls job)
                                    req))
-                      chan
+                      connection.Channel
     end
 
 type subReq (hs :: {(Type * Type)}) =
@@ -181,8 +184,7 @@ type subReq (hs :: {(Type * Type)}) =
 
 type submitRequest = subReq handlers
 
-fun subscribeSource (user : {Group : group, Member : member})
-                    (src : source (option submitRequest)) =
+fun listen (connection : connection) =
     let
         fun f [others ::_] [nm ::_] [h] [[nm] ~ others] _ (pf : equal _ _)
               (submit : h.2 -> tunit) (req : h.1) =
@@ -195,6 +197,7 @@ fun subscribeSource (user : {Group : group, Member : member})
                                                {Submit : h.2 -> tunit,
                                                 Request : h.1})
                                            hs)]
+                val src = connection.Source
             in
                 set src
                     (Some (cast (make [nm]
@@ -206,7 +209,9 @@ fun subscribeSource (user : {Group : group, Member : member})
         val listeners =
             @mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] fl f
     in
-        subscribeListener user listeners
+        subscribeListeners connection listeners
     end
+
+fun value connection = signal (connection.Source)
 
 end
