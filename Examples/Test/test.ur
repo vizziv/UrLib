@@ -4,24 +4,22 @@ structure Ureq = UserRequest.Make(struct
     con handlers = [A = (int, int), B = (int, int)]
     type group = int
     type member = int
-    fun mkCont _ ask =
+    fun cont _ ask =
         {A = fn foo =>
                 case foo of
                     ({Response = n, Member = m} :: []) =>
                     debug (Misc.plural n "object");
-                    ask {Members = Some (0 :: []), Request = (make [#B] n)}
+                    ask (make [#B] ({Member = 0, Request = n} :: []))
                   | _ => return (),
          B = fn foo =>
                 case foo of
                     ({Response = n, Member = m} :: []) =>
                     debug (Misc.plural n "thingy");
-                    ask {Members = Some (0 :: []), Request = (make [#A] n)}
+                    ask (make [#A] ({Member = 0, Request = n} :: []))
                   | _ => return ()}
 end)
 
-val start = Ureq.ask {Group = 0,
-                      Members = Some (0 :: []),
-                      Request = (make [#A] 9001)}
+val start = Ureq.ask 0 (make [#A] ({Member = 0, Request = 9001} :: []))
 
 fun test _ =
     connection <- Ureq.connect {Group = 0, Member = 0};

@@ -35,7 +35,7 @@ type effect = variant (map snd M.states)
 
 table sms : {Label : label, State : serialized state}
 
-fun cont (x : state) (y : effect) =
+fun next (x : state) (y : effect) =
     Option.mp (@casesGet fl)
               (@casesDiag [fst] [snd] [fn _ => state]
                           fl
@@ -56,7 +56,7 @@ fun step {Label = label, Effect = effect} =
         val cond = Sql.lookup {Label = label}
     in
         {State = statez} <- oneRow1 (Sql.select1 sms cond);
-        case cont (deserialize statez) effect of
+        case next (deserialize statez) effect of
             None => return None
           | Some state =>
             Sql.update sms {State = serialize state} cond;

@@ -3,3 +3,5 @@ include UserRequestStateMachine.Output
         [Proposal = _,
          Vote = _,
          Mission = _]
+
+val start : int -> tunit

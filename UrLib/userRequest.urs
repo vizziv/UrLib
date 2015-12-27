@@ -4,7 +4,8 @@ signature Types = sig
     con handlers :: {(Type * Type)}
     type group
     type member
-    type request = variant (map fst handlers)
+    type requests =
+         variant (map (fn h => list {Member : member, Request : h.1}) handlers)
 end
 
 signature Input = sig
@@ -13,21 +14,17 @@ signature Input = sig
     val sql_group : sql_injectable_prim group
     val sql_member : sql_injectable_prim member
     val eq_member : eq member
-    val mkCont : group
-                 -> ({Members : option (list member), Request : request}
-                     -> tunit)
-                 -> $(map (fn h =>
-                              list {Member : member, Response : h.2} -> tunit)
-                          handlers)
+    val cont : group
+               -> (requests -> tunit)
+               -> $(map (fn h =>
+                            list {Member : member, Response : h.2} -> tunit)
+                        handlers)
 end
 
 signature Output = sig
     include Types
     (* Server-side initialization for each group. *)
-    val ask : {Group : group,
-               Members : option (list member),
-               Request : request}
-              -> tunit
+    val ask : group -> requests -> tunit
     type connection
     type submitRequest =
         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})

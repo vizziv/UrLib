@@ -4,13 +4,16 @@ signature Types = sig
      fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
     con forget = K ==> fn (t :: K) => ()
     con equal :: K --> K -> K -> Type
+    type void
 end
 
-structure T : Types where
-              con equal = K ==>
-               fn a b =>
-                  {CastL : f :: (K -> Type) -> f b -> f a,
-                   CastR : f :: (K -> Type) -> f a -> f b} = struct end
+structure T : Types
+    where con equal = K ==>
+           fn a b =>
+              {CastL : f :: (K -> Type) -> f b -> f a,
+               CastR : f :: (K -> Type) -> f a -> f b}
+    where type void = variant [] = struct end
+
 open T
 
 fun id [t] (x : t) = x
@@ -47,6 +50,8 @@ fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
 fun casesGet [K] [r ::: {K}] (fl : folder r) [t ::: Type] =
     @@cases [map (fn _ => t) r] [t]
             (@map0 [fn _ => t -> t] (fn [ignore ::_] => id) fl)
+
+val contradiction = fn [t] => cases {}
 
 fun proj [nm ::_] [t] [drop] [[nm] ~ drop] (xs : $([nm = t] ++ drop)) = xs.nm
 
@@ -164,6 +169,7 @@ structure Functor  : sig
     val mp : f ::: (Type -> Type) -> t f ->
              a ::: Type -> b ::: Type -> (a -> b) -> f a -> f b
     val monad : f ::: (Type -> Type) -> monad f -> t f
+    val list : t list
     val field : nm :: Name -> ts ::: {Type} -> [[nm] ~ ts]
                 => t (fn t => $([nm = t] ++ ts))
     val choice : nm :: Name -> ts ::: {Type} -> [[nm] ~ ts] => folder ts
@@ -179,6 +185,8 @@ val mk = fn [f] => id
 val mp = fn [f] => id
 
 val monad = @@Monad.mp
+
+val list = @@List.mp
 
 fun field [nm ::_] [ts] [[nm] ~ ts] [a] [b]
           (f : a -> b) (r : $([nm = a] ++ ts)) =

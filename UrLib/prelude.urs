@@ -4,6 +4,7 @@ signature Types = sig
      fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
     con forget = K ==> fn (t :: K) => ()
     con equal :: K --> K -> K -> Type
+    type void
 end
 
 include Types
@@ -17,7 +18,26 @@ val castL : K --> a ::: K -> b ::: K
 val castR : K --> a ::: K -> b ::: K
             -> equal a b -> f :: (K -> Type) -> f a -> f b
 
+val contradiction : t ::: Type -> void -> t
+
 val impossible : t ::: Type -> t
+
+structure Functor : sig
+    class t :: (Type -> Type) -> Type
+    val mk : f ::: (Type -> Type)
+             -> (a ::: Type -> b ::: Type -> (a -> b) -> f a -> f b)
+             -> t f
+    val mp : f ::: (Type -> Type) -> t f ->
+             a ::: Type -> b ::: Type -> (a -> b) -> f a -> f b
+    val monad : f ::: (Type -> Type) -> monad f -> t f
+    val list : t list
+    val field : nm :: Name -> ts ::: {Type} -> [[nm] ~ ts]
+                => t (fn t => $([nm = t] ++ ts))
+    val choice : nm :: Name -> ts ::: {Type} -> [[nm] ~ ts] => folder ts
+                 -> t (fn t => variant ([nm = t] ++ ts))
+    val compose : f ::: (Type -> Type) -> g ::: (Type -> Type)
+                  -> t f -> t g -> t (compose f g)
+end
 
 val bit : bool -> int
 
@@ -71,22 +91,6 @@ val mapNm : K --> tf1 :: (K -> Type) -> tf2 :: ({K} -> K -> Type)
                 -> equal r ([nm = t] ++ others)
                 -> tf1 t -> tf2 ([nm = t] ++ others) t)
             -> $(map tf1 r) -> $(map (tf2 r) r)
-
-structure Functor : sig
-    class t :: (Type -> Type) -> Type
-    val mk : f ::: (Type -> Type)
-             -> (a ::: Type -> b ::: Type -> (a -> b) -> f a -> f b)
-             -> t f
-    val mp : f ::: (Type -> Type) -> t f ->
-             a ::: Type -> b ::: Type -> (a -> b) -> f a -> f b
-    val monad : f ::: (Type -> Type) -> monad f -> t f
-    val field : nm :: Name -> ts ::: {Type} -> [[nm] ~ ts]
-                => t (fn t => $([nm = t] ++ ts))
-    val choice : nm :: Name -> ts ::: {Type} -> [[nm] ~ ts] => folder ts
-                 -> t (fn t => variant ([nm = t] ++ ts))
-    val compose : f ::: (Type -> Type) -> g ::: (Type -> Type)
-                  -> t f -> t g -> t (compose f g)
-end
 
 val casesFunctor : r ::: {Type} -> folder r
                    -> f ::: (Type -> Type) -> Functor.t f

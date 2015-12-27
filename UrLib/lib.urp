@@ -5,6 +5,7 @@ prelude
 misc
 sql
 ui
+buffer
 stateMachine
 userRequest
 userRequestStateMachine

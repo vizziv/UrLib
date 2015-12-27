@@ -1,5 +1,6 @@
 include Prelude.Types
 
+
 signature Types = sig
     con handlerStates :: {(Type * Type * Type)}
     include UserRequest.Types
@@ -10,9 +11,7 @@ signature Types = sig
                   handlerStates
         where type label = group
     type translations =
-        $(map (fn h =>
-                h.3 -> transaction {Members : option (list member),
-                                    Request : h.1})
+        $(map (fn h => h.3 -> transaction (list {Member : member, Request : h.1}))
               handlerStates)
 end
 
@@ -23,7 +22,7 @@ signature Input = sig
     val sql_member : sql_injectable_prim member
     val eq_member : eq member
     val sm : StateMachine.t states
-    val mkRequest : group -> translations
+    val request : group -> translations
 end
 
 signature Output = sig

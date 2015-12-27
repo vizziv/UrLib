@@ -1,6 +1,7 @@
 (*
 TODO:
   - Make [ask] not break when called twice concurrently with the same group.
+  - Deal with empty request lists.
   - Double check database cleanup needs.
   - Allow reconnection by calling [connect] again.
 *)
@@ -11,7 +12,8 @@ signature Types = sig
     con handlers :: {(Type * Type)}
     type group
     type member
-    type request = variant (map fst handlers)
+    type requests =
+         variant (map (fn h => list {Member : member, Request : h.1}) handlers)
 end
 
 signature Input = sig
@@ -20,20 +22,16 @@ signature Input = sig
     val sql_group : sql_injectable_prim group
     val sql_member : sql_injectable_prim member
     val eq_member : eq member
-    val mkCont : group
-                 -> ({Members : option (list member), Request : request}
-                     -> tunit)
-                 -> $(map (fn h =>
-                              list {Member : member, Response : h.2} -> tunit)
-                          handlers)
+    val cont : group
+               -> (requests -> tunit)
+               -> $(map (fn h =>
+                            list {Member : member, Response : h.2} -> tunit)
+                        handlers)
 end
 
 signature Output = sig
     include Types
-    val ask : {Group : group,
-               Members : option (list member),
-               Request : request}
-              -> tunit
+    val ask : group -> requests -> tunit
     type connection
     type submitRequest =
         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
@@ -52,6 +50,7 @@ open M
 
 type job = int
 type instance = variant (map (fn _ => job) handlers)
+type request = variant (map fst handlers)
 type response = variant (map snd handlers)
 
 sequence jobs
@@ -92,33 +91,38 @@ fun instantiate [tf] job variant =
     {Instance = Some (serialize (@casesMapU [tf] [fn _ => int] fl
                                             (fn [t] _ => job) variant))}
 
-fun ask req =
+fun ask group request =
     let
-        val cond' = (SQL T.Group = {[req.Group]})
-        val cond =
-            case req.Members of
-                None => cond'
-              | Some members =>
-                (SQL {cond'}
-                 AND {Sql.lookups (List.mp (snoc {} [#Member]) members)})
+        val reqs =
+            @casesFunctor (@Folder.mp fl)
+                          (@Functor.compose Functor.list
+                                            (Functor.field [#Request]))
+                          request
+        val members = List.mp (proj [#Member]) reqs
+        val cond = (SQL T.Group = {[group]}
+                    AND {Sql.lookups (List.mp (snoc {} [#Member]) members)})
+        fun req member =
+            case List.find (fn req => req.Member = member) reqs of
+                None => impossible
+              | Some req => projs req
     in
         job <- nextval jobs;
         let
-            val instance = instantiate job req.Request
+            val instance = instantiate job request
         in
             queryI1 (Sql.select1 users cond)
-                    (fn {Channel = chan} =>
-                        send chan (projs req ++ {Job = job}));
+                    (fn {Member = member, Channel = chan} =>
+                        send chan (req member ++ {Job = job}));
             Sql.update users instance cond
         end
     end
 
 con respList t = list {Member : member, Response : t.2}
 
-fun cont user job resp =
+fun handle user job resp =
     let
-        val group = projs user
-        val member = projs user
+        val group = {Group = user.Group}
+        val member = {Member = user.Member}
         val instance = instantiate job resp
     in
         respsq <- query1' (Sql.selectLookup users (group ++ instance))
@@ -150,11 +154,11 @@ fun cont user job resp =
                        {Instance = None, Response = None}
                        (Sql.lookup group);
             @@cases [map respList handlers] [_]
-                    (mkCont group.Group (curry ask group)) resps
+                    (cont group.Group (ask group.Group)) resps
     end
 
 fun answer (user : {Group : group, Member : member, Key : int}) job resp =
-    rpc (cont user job resp)
+    rpc (handle user job resp)
 
 fun subscribeListeners connection listeners =
     let
