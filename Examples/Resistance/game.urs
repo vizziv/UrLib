@@ -1,7 +1,5 @@
-include UserRequestStateMachine.Output
-    where con handlerStates =
-        [Proposal = _,
-         Vote = _,
-         Mission = _]
+include Prelude.Types
 
-val start : int -> tunit
+include UserRequestStateMachine.Output
+
+val start : {Game : int, NumPlayers : int} -> tunit

@@ -4,7 +4,7 @@ datatype role = Resistance | Spy
 
 con game =
     [NumPlayers = int,
-     Roles = serialized (list role),
+     Roles = list role,
      Round = int,
      Score = int,
      Attempt = int,
@@ -12,8 +12,11 @@ con game =
 
 con team = [Team = list int]
 
-val countTrue : list {Response : bool, Member : int} -> int =
-    List.foldl (fn resp acc => bit resp.Response + acc) 0
+fun countBit f : list {Response : bool, Member : int} -> int =
+    List.foldl (fn resp acc => bit (f resp.Response) + acc) 0
+
+val countTrue = countBit id
+val countFalse = countBit not
 
 fun new numPlayers =
     let
@@ -23,9 +26,9 @@ fun new numPlayers =
             else
                 r <- rand;
                 if mod r numPlayers < numSpies then
-                    roles (Spy :: acc) (numPlayers - 1) (numSpies - 1)
+                    randRoles (Spy :: acc) (numPlayers - 1) (numSpies - 1)
                 else
-                    roles (Resistance :: acc) (numPlayers - 1) numSpies
+                    randRoles (Resistance :: acc) (numPlayers - 1) numSpies
     in
         roles <- randRoles [] numPlayers (case numPlayers of
                                               5 => 2
@@ -58,21 +61,19 @@ fun passed xs votes =
     countTrue votes > List.length votes
 
 fun succeeded xs actions =
-    countTrue actions > bit (xs.Round = 3 && xs.NumPlayers < 7)
+    countFalse actions <= bit (xs.Round = 3 && xs.NumPlayers < 7)
 
 fun team xs proposals =
     case proposals of
         {Member = player, Response = team} :: [] =>
-        if player = xs.Leader then team else impossible
+        if player = xs.Leader then List.sort gt team else impossible
       | _ => impossible
 
 val sm : StateMachine.t _ =
     {New =
-      fn {State = numPlayers, Effect = _ : list unit} =>
-         make [#Reveal] numPlayers,
-     Reveal =
-      fn
-     Proposal =
+      fn {State = xs, Effect = _ : list $([Response = unit] ++ _)} =>
+         make [#Prop] xs,
+     Prop =
       fn {State = xs, Effect = proposals} =>
          make [#Vote] ({Team = team xs proposals} ++ xs),
      Vote =
@@ -80,21 +81,21 @@ val sm : StateMachine.t _ =
          if passed xs votes then
              make [#Mission] xs
          else
-             make [#Proposal] ({Attempt = xs.Attempt + 1} ++ projs xs),
+             make [#Prop] ({Attempt = xs.Attempt + 1} ++ projs xs),
      Mission =
       fn {State = xs, Effect = actions} =>
-         make [#Proposal]
+         make [#Prop]
               ({Round = xs.Round + 1,
                 Score = xs.Score + bit (succeeded xs actions),
                 Attempt = 0,
                 Leader = nextLeader xs}
                ++ projs xs)}
 
-sequence games
+sequence gameLabels
 
 datatype message = Info of string | Chat of {Player : int, Message : string}
 
-table games =
+table games :
       {Game : int,
        NumPlayers : int,
        Started : bool,
@@ -102,31 +103,62 @@ table games =
           PRIMARY KEY Game
 
 fun broadcast game message =
-    {Channel = chan} <- Sql.selectLookup games {Game = game};
+    {Channel = chan} <- oneRow1 (Sql.selectLookup games {Game = game});
     send chan message
+
+datatype players = All | Only of list int
+
+fun dist [t] roles {Players = playersq, Resistance = rreq : t, Spy = sreq : t}
+    : list {Member : int, Request : t} =
+    let
+        fun req i (role : role) =
+            {Member = i,
+             Request = case role of
+                           Resistance => rreq
+                         | Spy => sreq}
+    in
+        case playersq of
+            All => List.mapi req roles
+          | Only players =>
+            List.mp (fn p => req p (case List.nth roles p of
+                                        None => impossible
+                                      | Some role => role))
+                    players
+    end
+
+fun distSame [t] roles {Players = playersq, Request = req : t} =
+    dist roles {Players = playersq, Resistance = req, Spy = req}
 
 fun request (game : int) =
     {New =
       fn xs =>
          let
-             val spies = List.filter (List.mapi (fn i _ => i) roles)
+             val spies = mapiPartial (fn i role =>
+                                         case role of
+                                             Resistance => None
+                                           | Spy => Some i)
+                                     xs.Roles
          in
-             return {Members = spies, Request = spies}
+             return (dist xs.Roles
+                          {Players = All,
+                           Resistance = None,
+                           Spy = Some spies})
          end,
-     Proposal =
+     Prop =
       fn xs =>
-         return {Members = Some (xs.Leader :: []), Request = missionSize xs},
+         return ({Member = xs.Leader, Request = missionSize xs} :: []),
      Vote =
       fn xs =>
-         return {Members = @@None [list int], Request = xs.Team},
+         return (distSame xs.Roles {Players = All, Request = xs.Team}),
      Mission =
       fn xs =>
-         return {Members = Some xs.Team, Request = xs.Team}}
+         return (distSame xs.Roles {Players = Only xs.Team, Request = ()})}
 
 open UserRequestStateMachine.Make(struct
     val sm = sm
     val request = request
 end)
 
-fun start game =
-    init {Group = game, State = }
+fun start gn =
+    (xs : $game) <- new gn.NumPlayers;
+    init {Group = gn.Game, State = make [#New] xs}
