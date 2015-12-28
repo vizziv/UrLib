@@ -72,8 +72,8 @@ fun team xs proposals =
 val sm : StateMachine.t _ =
     {New =
       fn {State = xs, Effect = _ : list $([Response = unit] ++ _)} =>
-         make [#Prop] xs,
-     Prop =
+         make [#Propose] xs,
+     Propose =
       fn {State = xs, Effect = proposals} =>
          make [#Vote] ({Team = team xs proposals} ++ xs),
      Vote =
@@ -81,10 +81,10 @@ val sm : StateMachine.t _ =
          if passed xs votes then
              make [#Mission] xs
          else
-             make [#Prop] ({Attempt = xs.Attempt + 1} ++ projs xs),
+             make [#Propose] ({Attempt = xs.Attempt + 1} ++ projs xs),
      Mission =
       fn {State = xs, Effect = actions} =>
-         make [#Prop]
+         make [#Propose]
               ({Round = xs.Round + 1,
                 Score = xs.Score + bit (succeeded xs actions),
                 Attempt = 0,
@@ -93,7 +93,12 @@ val sm : StateMachine.t _ =
 
 sequence gameLabels
 
-datatype message = Info of string | Chat of {Player : int, Message : string}
+datatype message =
+         Proposing of int
+       | Voting of list int
+       | Votes of list {Player : int, Vote : bool}
+       | Acting of list int
+       | Actions of {Successes : int, Fails : int}
 
 table games :
       {Game : int,
@@ -101,10 +106,6 @@ table games :
        Started : bool,
        Channel : channel message}
           PRIMARY KEY Game
-
-fun broadcast game message =
-    {Channel = chan} <- oneRow1 (Sql.selectLookup games {Game = game});
-    send chan message
 
 datatype players = All | Only of list int
 
@@ -129,6 +130,10 @@ fun dist [t] roles {Players = playersq, Resistance = rreq : t, Spy = sreq : t}
 fun distSame [t] roles {Players = playersq, Request = req : t} =
     dist roles {Players = playersq, Resistance = req, Spy = req}
 
+fun broadcast game message =
+    {Channel = chan} <- oneRow1 (Sql.selectLookup games {Game = game});
+    send chan message
+
 fun request (game : int) =
     {New =
       fn xs =>
@@ -144,14 +149,17 @@ fun request (game : int) =
                            Resistance = None,
                            Spy = Some spies})
          end,
-     Prop =
+     Propose =
       fn xs =>
+         broadcast game (Proposing xs.Leader);
          return ({Member = xs.Leader, Request = missionSize xs} :: []),
      Vote =
       fn xs =>
+         broadcast game (Voting xs.Team);
          return (distSame xs.Roles {Players = All, Request = xs.Team}),
      Mission =
       fn xs =>
+         broadcast game (Acting xs.Team);
          return (distSame xs.Roles {Players = Only xs.Team, Request = ()})}
 
 open UserRequestStateMachine.Make(struct
