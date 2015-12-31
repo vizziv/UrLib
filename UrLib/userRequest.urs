@@ -26,6 +26,8 @@ signature Output = sig
     (* Server-side initialization for each group. *)
     val ask : group -> requests -> tunit
     type connection
+    val groupOf : connection -> group
+    val memberOf : connection -> member
     type submitRequest =
         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
                      handlers)

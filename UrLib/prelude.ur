@@ -35,16 +35,6 @@ fun bit b = if b then 1 else 0
 fun maximum [t] (_ : ord t) : t -> list t -> t = List.foldl max
 fun minimum [t] (_ : ord t) : t -> list t -> t = List.foldl min
 
-fun distinct [t] (_ : eq t) (_ : ord t) (xs : list t) =
-    let
-        fun check xs =
-            case xs of
-                x0 :: x1 :: xs => if x0 = x1 then False else check (x1 :: xs)
-              | _ => True
-    in
-        check (List.sort le xs)
-    end
-
 fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
 
 fun casesGet [K] [r ::: {K}] (fl : folder r) [t ::: Type] =
@@ -54,6 +44,8 @@ fun casesGet [K] [r ::: {K}] (fl : folder r) [t ::: Type] =
 val contradiction = fn [t] => cases {}
 
 fun proj [nm ::_] [t] [drop] [[nm] ~ drop] (xs : $([nm = t] ++ drop)) = xs.nm
+
+val proj1 = fn [nm] [t] => proj [nm]
 
 fun projs [keep] [drop] [keep ~ drop] (xs : $(keep ++ drop)) = xs --- drop
 

@@ -33,6 +33,8 @@ signature Output = sig
     include Types
     val ask : group -> requests -> tunit
     type connection
+    val groupOf : connection -> group
+    val memberOf : connection -> member
     type submitRequest =
         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
                      handlers)
@@ -75,6 +77,9 @@ type connection =
       Channel : channel _,
       Source : source _}
 
+val groupOf = proj [#Group]
+val memberOf = proj [#Member]
+
 fun connect user : transaction connection =
     chan <- channel;
     key <- rand;
@@ -110,10 +115,10 @@ fun ask group request =
         let
             val instance = instantiate job request
         in
-            queryI1 (Sql.select1 users cond)
+            queryI1 (Sql.select users cond)
                     (fn {Member = member, Channel = chan} =>
                         send chan (req member ++ {Job = job}));
-            Sql.update users instance cond
+            Sql.update users cond instance
         end
     end
 
@@ -121,9 +126,8 @@ con respList t = list {Member : member, Response : t.2}
 
 fun handle user job resp =
     let
-        val group = {Group = user.Group}
-        val member = {Member = user.Member}
         val instance = instantiate job resp
+        val group = {Group = user.Group}
     in
         respsq <- query1' (Sql.selectLookup users (group ++ instance))
                           (fn {Member = member',
@@ -131,14 +135,15 @@ fun handle user job resp =
                                Response = respzq} accq =>
                               respz <- (if not (key' = user.Key) then
                                             None
-                                        else if member' = member.Member then
+                                        else if member' = user.Member then
                                             Some (serialize resp)
                                         else
                                             respzq);
                               acc <- accq;
                               (@casesDiagU [snd] [respList] [respList] fl
                                            (fn [t] resp acc =>
-                                               (member ++ {Response = resp})
+                                               ({Member = user.Member,
+                                                 Response = resp})
                                                :: acc)
                                            (deserialize respz) acc))
                           (Some (@casesMapU [snd] [respList] fl
@@ -146,15 +151,15 @@ fun handle user job resp =
                                             resp));
         case respsq of
             None =>
-            Sql.update users
-                       {Response = Some (serialize resp)}
-                       (Sql.lookup (user ++ instance))
+            Sql.updateLookup users
+                             (user ++ instance)
+                             {Response = Some (serialize resp)}
           | Some resps =>
-            Sql.update users
-                       {Instance = None, Response = None}
-                       (Sql.lookup group);
+            Sql.updateLookup users
+                             group
+                             {Instance = None, Response = None};
             @@cases [map respList handlers] [_]
-                    (cont group.Group (ask group.Group)) resps
+                    (cont user.Group (ask user.Group)) resps
     end
 
 fun answer (user : {Group : group, Member : member, Key : int}) job resp =

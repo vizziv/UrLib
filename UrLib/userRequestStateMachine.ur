@@ -1,16 +1,19 @@
 open Prelude
 
 signature Types = sig
-    con handlerStates :: {(Type * Type * Type)}
+    con handlerStates :: {(Type * Type * Type * Type)}
     include UserRequest.Types
         where con handlers = map (fn h => (h.1, h.2)) handlerStates
     include StateMachine.Types
-        where con states =
-	          map (fn h => (h.3, list {Member : member, Response : h.2}))
-                  handlerStates
+        where con states = map (fn h => (h.3, h.4)) handlerStates
         where type label = group
-    type translations =
-        $(map (fn h => h.3 -> transaction (list {Member : member, Request : h.1}))
+    type requestTranslations =
+        $(map (fn h =>
+                  h.3 -> transaction (list {Member : member, Request : h.1}))
+              handlerStates)
+    type responseTranslations =
+        $(map (fn h =>
+                  list {Member : member, Response : h.2} -> transaction h.4)
               handlerStates)
 end
 
@@ -21,13 +24,16 @@ signature Input = sig
     val sql_member : sql_injectable_prim member
     val eq_member : eq member
     val sm : StateMachine.t states
-    val request : group -> translations
+    val request : group -> requestTranslations
+    val response : group -> responseTranslations
 end
 
 signature Output = sig
     include Types
     val init : {Group : group, State : variant (map fst states)} -> tunit
     type connection
+    val groupOf : connection -> group
+    val memberOf : connection -> member
     type submitRequest =
         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
                      handlers)
@@ -49,31 +55,43 @@ structure Sm = StateMachine.Make(struct
     val sm = sm
 end)
 
-fun translate (group : group) =
+fun translateRequest (group : group) =
     (* For some reason, supplying the sketch of the first constructor argument
     of [casesFunctor] is needed for kind inference to work. *)
-    compose (@@casesFunctor [map (fn h :: (Type * Type * Type) => _) _]
+    compose (@@casesFunctor [map (fn h :: (Type * Type * Type * Type) => _) _]
                             (@Folder.mp fl)
                             [transaction] _)
-            (@casesMap [fn h :: (Type * Type * Type) => h.3]
-                       [fn h :: (Type * Type * Type) =>
+            (@casesMap [fn h :: (Type * Type * Type * Type) => h.3]
+                       [fn h :: (Type * Type * Type * Type) =>
                            transaction (list {Member : member, Request : h.1})]
                        fl
                        (request group))
 
-con responses (hs :: {(Type * Type * Type)}) =
+fun translateResponse (group : group) =
+    (* For some reason, supplying the sketch of the first constructor argument
+    of [casesFunctor] is needed for kind inference to work. *)
+    compose (@@casesFunctor [map (fn h :: (Type * Type * Type * Type) => _) _]
+                            (@Folder.mp fl)
+                            [transaction] _)
+            (@casesMap [fn h :: (Type * Type * Type * Type) =>
+                           list {Member : member, Response : h.2}]
+                       [fn h :: (Type * Type * Type * Type) => transaction h.4]
+                       fl
+                       (response group))
+
+con responses (hs :: {(Type * Type * Type * Type)}) =
     variant (map (fn h => list {Member : member, Response : h.2}) hs)
 
 fun cont (group : group) (ask : _ -> tunit) =
     @mapNm0 [fn hs h => list {Member : member, Response : h.2} -> tunit] fl
             (fn [others ::_] [nm ::_] [h] [[nm] ~ others] _
                 (pf : equal handlerStates ([nm = h] ++ others)) resps =>
-                stateq <- Sm.step {Label = group,
-                                   Effect = castL pf [responses]
-                                                  (make [nm] resps)};
+                resp <- translateResponse group (castL pf [responses]
+                                                       (make [nm] resps));
+                stateq <- Sm.step {Label = group, Effect = resp};
                 case stateq of
                     None => impossible
-                  | Some state => bind (translate group state) ask)
+                  | Some state => bind (translateRequest group state) ask)
 
 open UserRequest.Make(struct
     con handlers = M.handlers
@@ -85,6 +103,6 @@ end)
 
 fun init gs =
     state <- Sm.init (rename [#Group] [#Label] gs);
-    bind (translate gs.Group state) (ask gs.Group)
+    bind (translateRequest gs.Group state) (ask gs.Group)
 
 end

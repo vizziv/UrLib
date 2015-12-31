@@ -55,11 +55,11 @@ fun step {Label = label, Effect = effect} =
     let
         val cond = Sql.lookup {Label = label}
     in
-        {State = statez} <- oneRow1 (Sql.select1 sms cond);
+        {State = statez} <- oneRow1 (Sql.select sms cond);
         case next (deserialize statez) effect of
             None => return None
           | Some state =>
-            Sql.update sms {State = serialize state} cond;
+            Sql.update sms cond {State = serialize state};
             return (Some state)
     end
 

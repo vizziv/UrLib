@@ -2,9 +2,9 @@
 
 datatype lines = End | Line of string * source lines
 
-type t = { Head : source lines, Tail : source (source lines) }
+type t = {Head : source lines, Tail : source (source lines)}
 
-val create =
+val new =
     head <- source End;
     tail <- source head;
     return {Head = head, Tail = tail}

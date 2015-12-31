@@ -44,8 +44,6 @@ val bit : bool -> int
 val maximum : t ::: Type -> ord t -> t -> list t -> t
 val minimum : t ::: Type -> ord t -> t -> list t -> t
 
-val distinct : t ::: Type -> eq t -> ord t -> list t -> bool
-
 val cases : ts ::: {Type} -> u ::: Type
             -> $(map (fn t => t -> u) ts) -> variant ts -> u
 
@@ -54,6 +52,8 @@ val casesGet : K --> r ::: {K} -> folder r -> t ::: Type
 
 val proj : nm :: Name -> t ::: Type -> drop ::: {Type} -> [[nm] ~ drop]
            => $([nm = t] ++ drop) -> t
+
+val proj1 : nm ::: Name -> t ::: Type -> {nm : t} -> t
 
 val projs : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
             => $(keep ++ drop) -> $keep

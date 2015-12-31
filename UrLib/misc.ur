@@ -1,3 +1,13 @@
+fun distinct [t] (_ : eq t) (_ : ord t) (xs : list t) =
+    let
+        fun check xs =
+            case xs of
+                x0 :: x1 :: xs => if x0 = x1 then False else check (x1 :: xs)
+              | _ => True
+    in
+        check (List.sort le xs)
+    end
+
 fun plural (n : int) (x : string) =
     let
         fun vowel c = case strindex "aeiou" c of

@@ -13,9 +13,36 @@ fun update [unchanged ::: {Type}] [uniques ::: {{Unit}}]
            [changed ::: {Type}] [changed ~ unchanged]
            (fl : folder changed) (injs : $(map sql_injectable changed))
            (tab : sql_table (changed ++ unchanged) uniques)
-           (xs : $changed)
-           (cond : sql_exp [T = changed ++ unchanged] [] [] bool) =
+           (cond : sql_exp [T = changed ++ unchanged] [] [] bool)
+           (xs : $changed) =
     dml (Basis.update [changed] (@sqlInjectRow fl injs xs) tab cond)
+
+fun delete [fields ::: {Type}] [uniques ::: {{Unit}}]
+           (tab : sql_table fields uniques)
+           (cond : sql_exp [T = fields] [] [] bool) =
+    dml (Basis.delete tab cond)
+
+fun select [vals ::: {Type}] [others ::: {Type}] [vals ~ others]
+           [tabl] (_ : fieldsOf tabl (vals ++ others))
+           (tab : tabl) (cond : sql_exp [T = vals ++ others] [] [] bool) =
+    let
+        val q1 =
+            sql_query1
+                [[]]
+                {Distinct = False,
+                 From = sql_from_table [#T] tab,
+                 Where = cond,
+                 GroupBy = sql_subset [[T = (vals, others)]],
+                 Having = sql_inject True,
+                 SelectFields = sql_subset_all [[T = vals]],
+                 SelectExps = {}}
+    in
+        sql_query
+            {Rows = q1,
+             OrderBy = sql_order_by_Nil [[]],
+             Limit = sql_no_limit,
+             Offset = sql_no_offset}
+    end
 
 con lookupAcc (tabs :: {{Type}}) (agg :: {{Type}}) (exps :: {Type})
              (others :: {Type}) (tab :: Name) (r :: {Type}) =
@@ -54,44 +81,34 @@ fun lookups [tabs ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
     List.foldl (fn ks acc => (SQL {acc} AND {@lookup ! ! fl injs ks}))
                (SQL TRUE)
 
-fun select1 [vals ::: {Type}] [others ::: {Type}] [vals ~ others]
-            [tabl] (_ : fieldsOf tabl (vals ++ others))
-            (tab : tabl) (cond : sql_exp [T = vals ++ others] [] [] bool) =
-    let
-        val q1 =
-            sql_query1
-                [[]]
-                {Distinct = False,
-                 From = sql_from_table [#T] tab,
-                 Where = cond,
-                 GroupBy = sql_subset [[T = (vals, others)]],
-                 Having = sql_inject True,
-                 SelectFields = sql_subset_all [[T = vals]],
-                 SelectExps = {}}
-    in
-        sql_query
-            {Rows = q1,
-             OrderBy = sql_order_by_Nil [[]],
-             Limit = sql_no_limit,
-             Offset = sql_no_offset}
-    end
-
 fun selectLookup [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
                  [keys ~ vals] [keys ~ others] [vals ~ others]
                  (fl : folder keys) (injs : $(map sql_injectable keys))
                  [tabl] (_ : fieldsOf tabl (keys ++ vals ++ others))
                  (tab : tabl) (ks : $keys) =
-    @@select1 [vals] [keys ++ others] ! [_] _ tab (@lookup ! ! fl injs ks)
+    @@select [vals] [keys ++ others] ! [_] _ tab (@lookup ! ! fl injs ks)
 
 fun selectLookups [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
                   [keys ~ vals] [keys ~ others] [vals ~ others]
                   (fl : folder keys) (injs : $(map sql_injectable keys))
                   [tabl] (_ : fieldsOf tabl (keys ++ vals ++ others))
                   (tab : tabl) (kss : list $keys) =
-    @@select1 [vals] [keys ++ others] ! [_] _ tab (@lookups ! ! fl injs kss)
+    @@select [vals] [keys ++ others] ! [_] _ tab (@lookups ! ! fl injs kss)
+
+fun updateLookup [unchanged ::: {Type}] [uniques ::: {{Unit}}]
+                 [changed ::: {Type}] [changed ~ unchanged]
+                 (fl_changed : folder changed)
+                 (injs_changed : $(map sql_injectable changed))
+                 [keys ::: {Type}] [keys ~ changed ++ unchanged]
+                 (fl_keys : folder keys)
+                 (injs_keys : $(map sql_injectable keys))
+                 (tab : sql_table (keys ++ changed ++ unchanged) uniques)
+                 (ks : $keys) (xs : $changed) =
+    @@update [keys ++ unchanged] [uniques] [changed] ! fl_changed injs_changed
+             tab (@lookup ! ! fl_keys injs_keys ks) xs
 
 fun deleteLookup [keys ::: {Type}] [others ::: {Type}] [uniques ::: {{Unit}}]
                  [keys ~ others]
                  (fl : folder keys) (injs : $(map sql_injectable keys))
                  (tab : sql_table (keys ++ others) uniques) (ks : $keys) =
-    dml (delete tab (@lookup ! ! fl injs ks))
+    delete tab (@lookup ! ! fl injs ks)

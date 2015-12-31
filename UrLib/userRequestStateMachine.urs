@@ -1,16 +1,19 @@
 include Prelude.Types
 
 signature Types = sig
-    con handlerStates :: {(Type * Type * Type)}
+    con handlerStates :: {(Type * Type * Type * Type)}
     include UserRequest.Types
         where con handlers = map (fn h => (h.1, h.2)) handlerStates
     include StateMachine.Types
-        where con states =
-	          map (fn h => (h.3, list {Member : member, Response : h.2}))
-                  handlerStates
+        where con states = map (fn h => (h.3, h.4)) handlerStates
         where type label = group
-    type translations =
-        $(map (fn h => h.3 -> transaction (list {Member : member, Request : h.1}))
+    type requestTranslations =
+        $(map (fn h =>
+                  h.3 -> transaction (list {Member : member, Request : h.1}))
+              handlerStates)
+    type responseTranslations =
+        $(map (fn h =>
+                  list {Member : member, Response : h.2} -> transaction h.4)
               handlerStates)
 end
 
@@ -21,7 +24,8 @@ signature Input = sig
     val sql_member : sql_injectable_prim member
     val eq_member : eq member
     val sm : StateMachine.t states
-    val request : group -> translations
+    val request : group -> requestTranslations
+    val response : group -> responseTranslations
 end
 
 signature Output = sig
@@ -29,6 +33,8 @@ signature Output = sig
     (* Server-side initialization for each group. *)
     val init : {Group : group, State : variant (map fst states)} -> tunit
     type connection
+    val groupOf : connection -> group
+    val memberOf : connection -> member
     type submitRequest =
         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
                      handlers)
