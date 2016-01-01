@@ -125,13 +125,14 @@ fun distSame [t] roles {Members = membersq, Request = req : t} =
     dist roles {Members = membersq, Resistance = req, Spy = req}
 
 type group = int
+type member = int
 
 sequence groups
 
 datatype message =
          Proposing of int
        | Voting of list int
-       | Votes of list {Member : int, Response : bool}
+       | Votes of list {Member : member, Response : bool}
        | Acting of list int
        | Actions of {Successes : int, Fails : int}
        | Victory of {Winner : role, Roles : list role}
@@ -139,13 +140,17 @@ datatype message =
 table games :
       {Group : group,
        NumPlayers : int,
-       Started : bool,
-       Channel : channel message}
+       Started : bool}
           PRIMARY KEY Group
 
+table players :
+      {Group : group,
+       Member : member,
+       Channel : channel message}
+
 fun broadcast group message =
-    {Channel = chan} <- oneRow1 (Sql.selectLookup games {Group = group});
-    send chan message
+    queryI1 (Sql.selectLookup players {Group = group})
+            (fn {Channel = chan} => send chan message)
 
 fun finish group =
     Sql.deleteLookup games {Group = group}
@@ -205,39 +210,43 @@ end)
 
 fun join groupq =
     let
-        val userChan =
+        val newUser =
             case groupq of
                 None =>
                 group <- nextval groups;
-                chan <- channel;
                 Sql.insert games
                            {Group = group,
                             NumPlayers = 1,
-                            Started = False,
-                            Channel = chan};
-                return ({Group = group, Member = 0}, chan)
+                            Started = False};
+                return {Group = group, Member = 0}
               | Some group =>
-                {NumPlayers = n, Started = started, Channel = chan}
-                <- oneRow1 (Sql.selectLookup games {Group = group});
-                if started then
-                    impossible
-                else
-                    Sql.updateLookup games {Group = group} {NumPlayers = n+1};
-                    return ({Group = group, Member = n}, chan)
+                let
+                    val group = {Group = group}
+                in
+                    {NumPlayers = n, Started = started}
+                    <- oneRow1 (Sql.selectLookup games group);
+                    if started then
+                        impossible
+                    else
+                        Sql.updateLookup games group {NumPlayers = n+1};
+                        return (group ++ {Member = n})
+                end
     in
-        (user, chan) <- userChan;
+        user <- newUser;
+        chan <- channel;
+        Sql.insert players (user ++ {Channel = chan});
         connection <- connect user;
-        return {Player = user.Member, Connection = connection, Channel = chan}
+        return (user ++ {Connection = connection, Channel = chan})
     end
 
-fun start connection =
+fun start group =
     let
-        val group = {Group = groupOf connection}
+        val group = {Group = group}
     in
         {NumPlayers = n, Started = started}
         <- oneRow1 (Sql.selectLookup games group);
         if started then
-            impossible
+            return ()
         else
             Sql.updateLookup games group {Started = True};
             (xs : $game) <- new n;
@@ -285,6 +294,7 @@ fun formNew sr = <xml>
         None => "You're a loyal Resistance member."
       | Some spies =>
         "You're a Spy. The spies are " ^ Misc.showList spies ^ "."]}
+  {Ui.submitButton {Value = "Got it", Onclick = sr.Submit ()}}
 </xml>
 
 fun formPropose sr =
@@ -339,35 +349,38 @@ fun render srvq =
                Done = fn _ => <xml>Game over.</xml>}
 
 fun play groupq () : transaction page =
-    buffer <- Buffer.new;
-    {Player = player, Connection = connection, Channel = chan} <- join groupq;
+    j <- join groupq;
+    b <- Buffer.new;
     return <xml>
-      <body onload={listen connection;
-                    spawnListener (compose (Buffer.write buffer) show) chan}>
+      <body onload={listen j.Connection;
+                    spawnListener (compose (Buffer.write b) show) j.Channel}>
         <h1>Resistance</h1>
-        <h3>Player {[player]}</h3>
-        <dyn signal={Monad.mp render (value connection)}/>
+        <h3>Player {[j.Member]}</h3>
+        {Ui.submitButton {Onclick = rpc (start j.Group), Value = "Start"}}
+        <dyn signal={Monad.mp render (value j.Connection)}/>
         <hr/>
-        <dyn signal={Buffer.render buffer}/>
+        <dyn signal={Buffer.render b}/>
       </body>
     </xml>
-
 
 val menu : transaction page =
     groups <- groupsX (fn group => <xml>
       <li>
-        <submit action={play (Some group)} value={"Join game #" ^ show group}/>
+        <form>
+          <submit action={play (Some group)}
+	              value={"Join game #" ^ show group}/>
+        </form>
       </li>
     </xml>);
     return <xml>
       <body>
-        <form>
-          <ul>
-            {groups}
-            <li>
+        <ul>
+          {groups}
+          <li>
+            <form>
               <submit action={play None} value={"Create new game"}/>
-            </li>
-          </ul>
-        </form>
+            </form>
+          </li>
+        </ul>
       </body>
     </xml>

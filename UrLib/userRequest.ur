@@ -57,10 +57,6 @@ type response = variant (map snd handlers)
 
 sequence jobs
 
-val pkeyGroupMember = @primary_key [#Group] [[Member = _]] ! !
-                                   {Group = sql_group,
-                                    Member = sql_member}
-
 table users :
       {Group : group,
        Member : member,
@@ -68,7 +64,6 @@ table users :
        Key : int,
        Instance : option (serialized instance),
        Response : option (serialized response)}
-          PRIMARY KEY {{pkeyGroupMember}}
 
 type connection =
      {Group : _,
@@ -133,10 +128,11 @@ fun handle user job resp =
                           (fn {Member = member',
                                Key = key',
                                Response = respzq} accq =>
-                              respz <- (if not (key' = user.Key) then
-                                            None
-                                        else if member' = user.Member then
-                                            Some (serialize resp)
+                              respz <- (if member' = user.Member then
+                                            if key' = user.Key then
+                                                Some (serialize resp)
+                                            else
+                                                None
                                         else
                                             respzq);
                               acc <- accq;
@@ -151,10 +147,12 @@ fun handle user job resp =
                                             resp));
         case respsq of
             None =>
+            debug "Still waiting for responses.";
             Sql.updateLookup users
                              (user ++ instance)
                              {Response = Some (serialize resp)}
           | Some resps =>
+            debug "All responses received!";
             Sql.updateLookup users
                              group
                              {Instance = None, Response = None};
