@@ -55,29 +55,14 @@ structure Sm = StateMachine.Make(struct
     val sm = sm
 end)
 
-fun translateRequest (group : group) =
-    (* For some reason, supplying the sketch of the first constructor argument
-    of [casesFunctor] is needed for kind inference to work. *)
-    compose (@@casesFunctor [map (fn h :: (Type * Type * Type * Type) => _) _]
-                            (@Folder.mp fl)
-                            [transaction] _)
-            (@casesMap [fn h :: (Type * Type * Type * Type) => h.3]
-                       [fn h :: (Type * Type * Type * Type) =>
-                           transaction (list {Member : member, Request : h.1})]
-                       fl
-                       (request group))
+(* For some reason, supplying the sketches of constructor functions helps with
+type inference. *)
 
-fun translateResponse (group : group) =
-    (* For some reason, supplying the sketch of the first constructor argument
-    of [casesFunctor] is needed for kind inference to work. *)
-    compose (@@casesFunctor [map (fn h :: (Type * Type * Type * Type) => _) _]
-                            (@Folder.mp fl)
-                            [transaction] _)
-            (@casesMap [fn h :: (Type * Type * Type * Type) =>
-                           list {Member : member, Response : h.2}]
-                       [fn h :: (Type * Type * Type * Type) => transaction h.4]
-                       fl
-                       (response group))
+val translateRequest =
+    compose (@casesTraverse [fn _ => _] [fn _ => _] fl _) request
+
+val translateResponse =
+    compose (@casesTraverse [fn _ => _] [fn _ => _] fl _) response
 
 con responses (hs :: {(Type * Type * Type * Type)}) =
     variant (map (fn h => list {Member : member, Response : h.2}) hs)

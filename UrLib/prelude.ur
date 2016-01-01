@@ -224,6 +224,20 @@ fun casesMapU [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
     @casesMap [tf1] [tf2] fl
               (@map0 [fn t => tf1 t -> tf2 t] (fn [t ::_] => f) fl)
 
+fun casesTraverse [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
+                  [r ::: {K}] (fl : folder r)
+                  [f ::: Type -> Type] (_ : Functor.t f)
+                  (fs : $(map (fn t :: K => tf1 t -> f (tf2 t)) r))
+    : variant (map tf1 r) -> f (variant (map tf2 r)) =
+    @@cases [map tf1 r] [_]
+            (@mapNm [fn t => tf1 t -> f (tf2 t)]
+                    [fn r t => tf1 t -> f (variant (map tf2 r))]
+                    fl
+                    (fn [others ::_] [nm ::_] [t]
+                        [[nm] ~ others] _ _ =>
+                        compose (Functor.mp (make [nm])))
+                    fs)
+
 fun casesDiag [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
               [r ::: {K}] (fl : folder r)
               (fs : $(map (fn t :: K => tf1 t -> tf2 t -> tf3 t) r))
