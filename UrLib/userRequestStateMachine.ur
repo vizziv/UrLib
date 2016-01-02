@@ -75,7 +75,7 @@ fun cont (group : group) (ask : _ -> tunit) =
                                                        (make [nm] resps));
                 stateq <- Sm.step {Label = group, Effect = resp};
                 case stateq of
-                    None => impossible
+                    None => impossible _LOC_
                   | Some state => bind (translateRequest group state) ask)
 
 open UserRequest.Make(struct

@@ -26,9 +26,8 @@ val refl : K --> a ::: K -> equal a a =
 fun castL [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastL
 fun castR [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastR
 
-val impossible : t ::: Type -> t =
- fn [t] =>
-    error <xml>Nothing, not even this error, is impossible!</xml>
+fun impossible [t] loc : t =
+    error <xml>The allegedly impossible has occurred at {[loc]}.</xml>
 
 fun bit b = if b then 1 else 0
 

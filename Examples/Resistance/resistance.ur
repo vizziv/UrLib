@@ -4,6 +4,11 @@ open Prelude
 
 datatype role = Resistance | Spy
 
+val show_role =
+    mkShow (fn role => case role of
+                           Resistance => "Resistance"
+                         | Spy => "Spy")
+
 con game =
     [NumPlayers = int,
      Roles = list role,
@@ -57,7 +62,7 @@ fun missionRequest xs =
                      | _ => 3::4::4::5::5::[])
                   xs.Round of
         Some n => {NumPlayers = xs.NumPlayers, MissionSize = n}
-      | None => impossible
+      | None => impossible _LOC_
 
 fun passed xs votes =
     countFalse votes < xs.NumPlayers / 2
@@ -68,20 +73,23 @@ fun succeeded xs actions =
 fun team xs proposals =
     case proposals of
         {Member = player, Response = team} :: [] =>
-        if player = xs.Leader then List.sort gt team else impossible
-      | _ => impossible
+        if player = xs.Leader then List.sort gt team else impossible _LOC_
+      | _ => impossible _LOC_
 
 val sm : StateMachine.t _ =
     {New = fn {State = xs, Effect = ()} => make [#Propose] xs,
      Propose =
       fn {State = xs, Effect = proposals} =>
-         make [#Vote] ({Team = team xs proposals} ++ xs),
+         (if xs.Attempt < 4 then make [#Vote] else make [#Mission])
+             ({Team = team xs proposals} ++ xs),
      Vote =
       fn {State = xs, Effect = votes} =>
          if passed xs votes then
              make [#Mission] xs
          else
-             make [#Propose] ({Attempt = xs.Attempt + 1} ++ projs xs),
+             make [#Propose] ({Attempt = xs.Attempt + 1,
+                               Leader = nextLeader xs}
+                              ++ projs xs),
      Mission =
       fn {State = xs, Effect = actions} =>
          let
@@ -116,7 +124,7 @@ fun dist [t] roles {Members = membersq, Resistance = rreq : t, Spy = sreq : t}
             All => List.mapi req roles
           | Subset members =>
             List.mp (fn p => req p (case List.nth roles p of
-                                        None => impossible
+                                        None => impossible _LOC_
                                       | Some role => role))
                     members
     end
@@ -226,7 +234,7 @@ fun join groupq =
                     {NumPlayers = n, Started = started}
                     <- oneRow1 (Sql.selectLookup games group);
                     if started then
-                        impossible
+                        impossible _LOC_
                     else
                         Sql.updateLookup games group {NumPlayers = n+1};
                         return (group ++ {Member = n})
@@ -264,13 +272,9 @@ val show_message : show message =
     let
         val showVotes =
             compose Misc.stringList
-                    (List.mp (fn {Member = player, Response = vote} =>
-                                 show player ^ ": "
+                    (List.mp (fn {Member = member, Response = vote} =>
+                                 show member ^ ": "
                                  ^ if vote then "approve" else "reject"))
-        fun showRole role =
-            case role of
-                Resistance => "Resistance"
-              | Spy => "Spy"
         fun showMessage message =
             case message of
                 Proposing player =>
@@ -278,23 +282,24 @@ val show_message : show message =
               | Voting team =>
                 "Voting on team " ^ Misc.showList team ^ "."
               | Votes votes =>
-                "Votes are " ^ showVotes votes ^ "."
+                "Votes: " ^ showVotes votes ^ "."
               | Acting team =>
                 "Team " ^ Misc.showList team ^ " going on mission."
               | Actions {Successes = s, Fails = f} =>
-                "There were " ^ show s ^ " successes and " ^ show f ^ "fails."
+                "Successes: " ^ show s ^ ". Fails: " ^ show f ^ "."
               | Victory {Winner = w, Roles = rs} =>
-                showRole w ^ " victory! The spies were " ^ showSpies rs ^ "."
+                show w ^ " victory! The spies were " ^ showSpies rs ^ "."
     in
         mkShow showMessage
     end
 
-fun formNew sr = <xml>
+fun formNew (infoSrc : source _) sr = <xml>
   {[case sr.Request of
         None => "You're a loyal Resistance member."
       | Some spies =>
         "You're a Spy. The spies are " ^ Misc.showList spies ^ "."]}
   {Ui.submitButton {Value = "Got it", Onclick = sr.Submit ()}}
+  <active code={set infoSrc sr.Request; return <xml></xml>}/>
 </xml>
 
 fun formPropose sr =
@@ -326,12 +331,12 @@ fun formBool submit {True = nameT, False = nameF} =
     Ui.submitButtons ({Value = nameT, Onclick = submit True},
                       {Value = nameF, Onclick = submit False})
 
-fun render srvq =
+fun renderForm (infoSrc : source _) srvq =
     case srvq of
         None => <xml>Waiting....</xml>
       | Some srv =>
         match srv
-              {New = formNew,
+              {New = formNew infoSrc,
                Propose =
                 fn sr => <xml>
                   <active code={formPropose sr}/>
@@ -348,16 +353,27 @@ fun render srvq =
                 </xml>,
                Done = fn _ => <xml>Game over.</xml>}
 
+fun renderInfo info =
+    case info of
+        None => <xml>You don't know anything....</xml>
+      | Some spies => <xml>You know the spies are {[Misc.showList spies]}</xml>
+
 fun play groupq () : transaction page =
     j <- join groupq;
     b <- Buffer.new;
+    infoSrc <- source None;
     return <xml>
       <body onload={listen j.Connection;
                     spawnListener (compose (Buffer.write b) show) j.Channel}>
         <h1>Resistance</h1>
         <h3>Player {[j.Member]}</h3>
-        {Ui.submitButton {Onclick = rpc (start j.Group), Value = "Start"}}
-        <dyn signal={Monad.mp render (value j.Connection)}/>
+        {case groupq of
+             None => Ui.submitButton {Value = "Start",
+                                      Onclick = rpc (start j.Group)}
+           | Some _ => <xml></xml>}
+        <dyn signal={Monad.mp (renderForm infoSrc) (value j.Connection)}/>
+        <hr/>
+        <dyn signal={Monad.mp renderInfo (signal infoSrc)}/>
         <hr/>
         <dyn signal={Buffer.render b}/>
       </body>

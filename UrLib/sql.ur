@@ -79,7 +79,7 @@ fun lookups [tabs ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
             (fl : folder keys) (injs : $(map sql_injectable keys))
     : list $keys -> sql_exp ([tab = keys ++ others] ++ tabs) agg exps bool =
     List.foldl (fn ks acc => (SQL {acc} OR {@lookup ! ! fl injs ks}))
-               (SQL TRUE)
+               (SQL FALSE)
 
 fun selectLookup [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
                  [keys ~ vals] [keys ~ others] [vals ~ others]

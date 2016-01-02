@@ -20,7 +20,7 @@ val castR : K --> a ::: K -> b ::: K
 
 val contradiction : t ::: Type -> void -> t
 
-val impossible : t ::: Type -> t
+val impossible : t ::: Type -> string -> t
 
 structure Functor : sig
     class t :: (Type -> Type) -> Type

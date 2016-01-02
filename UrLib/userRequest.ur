@@ -103,7 +103,7 @@ fun ask group request =
                     AND {Sql.lookups (List.mp (snoc {} [#Member]) members)})
         fun req member =
             case List.find (fn req => req.Member = member) reqs of
-                None => impossible
+                None => impossible _LOC_
               | Some req => projs req
     in
         job <- nextval jobs;
@@ -147,12 +147,10 @@ fun handle user job resp =
                                             resp));
         case respsq of
             None =>
-            debug "Still waiting for responses.";
             Sql.updateLookup users
                              (user ++ instance)
                              {Response = Some (serialize resp)}
           | Some resps =>
-            debug "All responses received!";
             Sql.updateLookup users
                              group
                              {Instance = None, Response = None};
@@ -196,22 +194,16 @@ fun listen (connection : connection) =
         fun f [others ::_] [nm ::_] [h] [[nm] ~ others] _ (pf : equal _ _)
               (submit : h.2 -> tunit) (req : h.1) =
             let
-                val cast =
-                    castL pf
-                          (* Using [subReq] hangs the compiler! *)
-                          [fn hs =>
-                              variant (map (fn h =>
-                                               {Submit : h.2 -> tunit,
-                                                Request : h.1})
-                                           hs)]
                 val src = connection.Source
             in
                 set src
-                    (Some (cast (make [nm]
-                                      {Submit = fn resp =>
-                                                   set src None;
-                                                   submit resp,
-                                       Request = req})))
+                    (Some (castL pf [subReq]
+                                 (make [nm]
+                                       {Submit =
+                                         fn resp =>
+                                            set src None;
+                                            submit resp,
+                                        Request = req})))
             end
         val listeners =
             @mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] fl f
