@@ -11,6 +11,12 @@ include Types
 
 val id : t ::: Type -> t -> t
 
+val on : a ::: Type -> b ::: Type -> c ::: Type
+         -> (b -> b -> c) -> (a -> b) -> a -> a -> c
+
+val zip : a ::: Type -> b ::: Type -> c ::: Type
+          -> (a -> b -> c) -> list a -> list b -> list c
+
 val refl : K --> a ::: K -> equal a a
 
 val castL : K --> a ::: K -> b ::: K

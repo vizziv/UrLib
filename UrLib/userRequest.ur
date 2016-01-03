@@ -125,11 +125,11 @@ fun handle user job resp =
         val group = {Group = user.Group}
     in
         respsq <- query1' (Sql.selectLookup users (group ++ instance))
-                          (fn {Member = member',
-                               Key = key',
+                          (fn {Member = member,
+                               Key = key,
                                Response = respzq} accq =>
-                              respz <- (if member' = user.Member then
-                                            if key' = user.Key then
+                              respz <- (if member = user.Member then
+                                            if key = user.Key then
                                                 Some (serialize resp)
                                             else
                                                 None
@@ -138,7 +138,7 @@ fun handle user job resp =
                               acc <- accq;
                               (@casesDiagU [snd] [respList] [respList] fl
                                            (fn [t] resp acc =>
-                                               ({Member = user.Member,
+                                               ({Member = member,
                                                  Response = resp})
                                                :: acc)
                                            (deserialize respz) acc))

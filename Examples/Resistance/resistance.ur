@@ -25,6 +25,17 @@ fun countBit f : list {Response : bool, Member : int} -> int =
 val countTrue = countBit id
 val countFalse = countBit not
 
+fun roleOf roles i =
+    case List.nth roles i of
+        None => impossible _LOC_
+      | Some role => role
+
+val spies =
+    mapiPartial (fn i role =>
+                    case role of
+                        Resistance => None
+                      | Spy => Some i)
+
 fun new numPlayers =
     let
         fun randRoles acc unassigned spiesNeeded =
@@ -65,10 +76,16 @@ fun missionRequest xs =
       | None => impossible _LOC_
 
 fun passed xs votes =
-    countFalse votes < xs.NumPlayers / 2
+    countTrue votes > xs.NumPlayers / 2
 
-fun succeeded xs actions =
-    countFalse actions <= bit (xs.Round = 3 && xs.NumPlayers < 7)
+fun verify xs =
+    List.mapi (fn i action =>
+                  case roleOf xs.Roles i of
+                      Resistance => projs action ++ {Response = True}
+                    | Spy => action)
+
+fun succeeded xs (actions : list {Member : _, Response : _}) =
+    countFalse (verify xs actions) <= bit (xs.Round = 3 && xs.NumPlayers < 7)
 
 fun team xs proposals =
     case proposals of
@@ -163,12 +180,6 @@ fun broadcast group message =
 fun finish group =
     Sql.deleteLookup games {Group = group}
 
-val spies =
-    mapiPartial (fn i role =>
-                    case role of
-                        Resistance => None
-                      | Spy => Some i)
-
 fun request (group : group) =
     {New =
       fn xs =>
@@ -205,9 +216,13 @@ fun response (group : group) =
          return votes,
      Mission =
       fn actions =>
-         broadcast group (Actions {Successes = countTrue actions,
-                                   Fails = countFalse actions});
-         return actions,
+         let
+             val actions = (* verify xs *) actions
+         in
+             broadcast group (Actions {Successes = countTrue actions,
+                                       Fails = countFalse actions});
+             return actions
+         end,
      Done = fn (_ : list {Member : _, Response : void}) => return ()}
 
 open UserRequestStateMachine.Make(struct
@@ -271,7 +286,7 @@ val showSpies = compose Misc.showList spies
 val show_message : show message =
     let
         val showVotes =
-            compose Misc.stringList
+            compose (compose Misc.stringList (List.sort gt))
                     (List.mp (fn {Member = member, Response = vote} =>
                                  show member ^ ": "
                                  ^ if vote then "approve" else "reject"))
