@@ -172,6 +172,7 @@ table players :
       {Group : group,
        Member : member,
        Channel : channel message}
+          PRIMARY KEY (Group, Member)
 
 fun broadcast group message =
     queryI1 (Sql.selectLookup players {Group = group})

@@ -64,6 +64,7 @@ table users :
        Key : int,
        Instance : option (serialized instance),
        Response : option (serialized response)}
+          PRIMARY KEY (Group, Member)
 
 type connection =
      {Group : _,

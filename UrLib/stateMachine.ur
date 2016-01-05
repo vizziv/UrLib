@@ -14,7 +14,7 @@ end
 signature Input = sig
     include Types
     val fl : folder states
-    val sql_label : sql_injectable label
+    val sql_label : sql_injectable_prim label
     val sm : t states
 end
 
@@ -33,7 +33,7 @@ open M
 type state = variant (map fst M.states)
 type effect = variant (map snd M.states)
 
-table sms : {Label : label, State : serialized state}
+table sms : {Label : label, State : serialized state} PRIMARY KEY Label
 
 fun next (x : state) (y : effect) =
     Option.mp (@casesGet fl)
