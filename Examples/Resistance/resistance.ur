@@ -19,7 +19,10 @@ con game =
 
 con team = [Team = list int]
 
-fun countBit f : list {Response : bool, Member : int} -> int =
+type group = int
+type member = int
+
+fun countBit f : list {Response : bool, Member : member} -> int =
     List.foldl (fn resp acc => bit (f resp.Response) + acc) 0
 
 val countTrue = countBit id
@@ -149,9 +152,6 @@ fun dist [t] roles {Members = membersq, Resistance = rreq : t, Spy = sreq : t}
 fun distSame [t] roles {Members = membersq, Request = req : t} =
     dist roles {Members = membersq, Resistance = req, Spy = req}
 
-type group = int
-type member = int
-
 sequence groups
 
 datatype message =
@@ -174,12 +174,7 @@ table players :
        Channel : channel message}
           PRIMARY KEY (Group, Member)
 
-fun broadcast group message =
-    queryI1 (Sql.selectLookup players {Group = group})
-            (fn {Channel = chan} => send chan message)
-
-fun finish group =
-    Sql.deleteLookup games {Group = group}
+structure Bc = Broadcast.Make(struct end)
 
 fun request (group : group) =
     {New =
@@ -190,22 +185,21 @@ fun request (group : group) =
                        Spy = Some (spies xs.Roles)}),
      Propose =
       fn xs =>
-         broadcast group (Proposing xs.Leader);
+         Bc.tell group (Proposing xs.Leader);
          return ({Member = xs.Leader,
                   Request = missionRequest xs}
 	             :: []),
      Vote =
       fn xs =>
-         broadcast group (Voting xs.Team);
+         Bc.tell group (Voting xs.Team);
          return (distSame xs.Roles {Members = All, Request = xs.Team}),
      Mission =
       fn xs =>
-         broadcast group (Acting xs.Team);
+         Bc.tell group (Acting xs.Team);
          return (distSame xs.Roles {Members = Subset xs.Team, Request = ()}),
      Done =
       fn xs =>
-         broadcast group (Victory xs);
-         finish group;
+         Bc.tell group (Victory xs);
          return (distSame xs.Roles {Members = All, Request = ()})}
 
 fun response (group : group) =
@@ -213,20 +207,17 @@ fun response (group : group) =
      Propose = @@return [_] [list {Member : _, Response : _}] _,
      Vote =
       fn votes =>
-         broadcast group (Votes votes);
+         Bc.tell group (Votes votes);
          return votes,
      Mission =
       fn actions =>
-         let
-             val actions = (* verify xs *) actions
-         in
-             broadcast group (Actions {Successes = countTrue actions,
-                                       Fails = countFalse actions});
-             return actions
-         end,
+         (* TODO: make Resistance unable to fail missions. *)
+         Bc.tell group (Actions {Successes = countTrue actions,
+                                 Fails = countFalse actions});
+         return actions,
      Done = fn (_ : list {Member : _, Response : void}) => return ()}
 
-open UserRequestStateMachine.Make(struct
+structure Ursm = UserRequestStateMachine.Make(struct
     val sm = sm
     val request = request
     val response = response
@@ -257,10 +248,9 @@ fun join groupq =
                 end
     in
         user <- newUser;
-        chan <- channel;
-        Sql.insert players (user ++ {Channel = chan});
-        connection <- connect user;
-        return (user ++ {Connection = connection, Channel = chan})
+        cxnBc <- Bc.connect user;
+        cxnUrsm <- Ursm.connect user;
+        return (user ++ {CxnBc = cxnBc, CxnUrsm = cxnUrsm})
     end
 
 fun start group =
@@ -274,7 +264,7 @@ fun start group =
         else
             Sql.updateLookup games group {Started = True};
             (xs : $game) <- new n;
-            init (group ++ {State = make [#New] xs})
+            Ursm.init (group ++ {State = make [#New] xs})
     end
 
 (* Front End. *)
@@ -379,15 +369,15 @@ fun play groupq () : transaction page =
     b <- Buffer.new;
     infoSrc <- source None;
     return <xml>
-      <body onload={listen j.Connection;
-                    spawnListener (compose (Buffer.write b) show) j.Channel}>
+      <body onload={Ursm.listen j.CxnUrsm;
+                    Bc.listen (compose (Buffer.write b) show) j.CxnBc}>
         <h1>Resistance</h1>
         <h3>Player {[j.Member]}</h3>
         {case groupq of
              None => Ui.submitButton {Value = "Start",
                                       Onclick = rpc (start j.Group)}
            | Some _ => <xml></xml>}
-        <dyn signal={Monad.mp (renderForm infoSrc) (value j.Connection)}/>
+        <dyn signal={Monad.mp (renderForm infoSrc) (Ursm.value j.CxnUrsm)}/>
         <hr/>
         <dyn signal={Monad.mp renderInfo (signal infoSrc)}/>
         <hr/>

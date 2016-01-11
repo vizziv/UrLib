@@ -77,8 +77,6 @@ val snoc : ts ::: {Type} -> $ts
 
 val spawnListener : t ::: Type -> (t -> tunit) -> channel t -> tunit
 
-val spawnSignal : t ::: Type -> channel t -> transaction (signal (option t))
-
 val mapiPartial : a ::: Type -> b ::: Type
                   -> (int -> a -> option b) -> list a -> list b
 

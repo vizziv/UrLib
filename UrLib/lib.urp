@@ -6,6 +6,7 @@ misc
 sql
 ui
 buffer
+broadcast
 stateMachine
 userRequest
 userRequestStateMachine
