@@ -1,5 +1,6 @@
 signature Types = sig
     type tunit = transaction unit
+    type acceptor t = t -> tunit
     con compose = K1 ==> K2 ==> K3 ==>
      fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
     con forget = K ==> fn (t :: K) => ()
