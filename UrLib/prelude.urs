@@ -46,6 +46,8 @@ structure Functor : sig
                   -> t f -> t g -> t (compose f g)
 end
 
+val identity_monad : monad (fn t => t)
+
 val bit : bool -> int
 
 val maximum : t ::: Type -> ord t -> t -> list t -> t
@@ -130,3 +132,11 @@ val casesDiagU : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
                  -> (t ::: K -> tf1 t -> tf2 t -> tf3 t)
                  -> variant (map tf1 r) -> variant (map tf2 r)
                  -> option (variant (map tf3 r))
+
+val casesDiagTraverse : K --> tf1 :: (K -> Type) -> tf2 :: (K -> Type)
+                        -> tf3 :: (K -> Type)
+                        -> r ::: {K} -> folder r
+                        -> f ::: (Type -> Type) -> monad f
+                        -> $(map (fn t :: K => tf1 t -> tf2 t -> f (tf3 t)) r)
+                        -> variant (map tf1 r) -> variant (map tf2 r)
+                        -> f (option (variant (map tf3 r)))

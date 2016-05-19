@@ -1,5 +1,6 @@
 type t (states :: {(Type * Type)}) =
-    $(map (fn s => {State : s.1, Effect : s.2} -> variant (map fst states))
+    $(map (fn s => {State : s.1, Effect : s.2}
+                   -> transaction (variant (map fst states)))
           states)
 
 signature Types = sig

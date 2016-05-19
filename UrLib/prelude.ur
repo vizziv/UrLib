@@ -38,6 +38,9 @@ fun castR [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastR
 fun impossible [t] loc : t =
     error <xml>The allegedly impossible has occurred at {[loc]}.</xml>
 
+val identity_monad =
+    mkMonad {Return = @@id, Bind = fn [t1] [t2] (x : t1) (f : t1 -> t2) => f x}
+
 fun bit b = if b then 1 else 0
 
 fun maximum [t] (_ : ord t) : t -> list t -> t = List.foldl max
@@ -241,33 +244,45 @@ fun casesTraverse [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
                         compose (Functor.mp (make [nm])))
                     fs)
 
-fun casesDiag [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
-              [r ::: {K}] (fl : folder r)
-              (fs : $(map (fn t :: K => tf1 t -> tf2 t -> tf3 t) r))
+fun casesDiagTraverse [K] [tf1 :: K -> Type] [tf2 :: K -> Type]
+                      [tf3 :: K -> Type]
+                      [r ::: {K}] (fl : folder r)
+                      [f ::: Type -> Type] (_ : monad f)
+                      (fs : $(map (fn t :: K => tf1 t -> tf2 t -> f (tf3 t))
+                                  r))
     : variant (map tf1 r) -> variant (map tf2 r)
-      -> option (variant (map tf3 r)) =
+      -> f (option (variant (map tf3 r))) =
     let
         fun nones [others] [nm] [t]
                   [[nm] ~ others] (fl_others : folder others) =
             @map0 [fn u =>
-                      tf2 u -> option (variant (map tf3 ([nm = t] ++ others)))]
-                  (fn [u ::_] _ => None)
+                      tf2 u ->
+                      f (option (variant (map tf3 ([nm = t] ++ others))))]
+                  (fn [u ::_] _ => return None)
                   fl_others
     in
         @@cases [map tf1 r] [_]
-                (@mapNm [fn t => tf1 t -> tf2 t -> tf3 t]
+                (@mapNm [fn t => tf1 t -> tf2 t -> f (tf3 t)]
                         [fn r t =>
                             tf1 t -> variant (map tf2 r)
-                            -> option (variant (map tf3 r))]
+                            -> f (option (variant (map tf3 r)))]
                         fl
                         (fn [others ::_] [nm ::_] [t]
                             [[nm] ~ others] fl_others _
-                            (f : tf1 t -> tf2 t -> tf3 t) (x : tf1 t) =>
+                            (f : tf1 t -> tf2 t -> f (tf3 t)) (x : tf1 t) =>
                             cases (@nones ! fl_others
                                    ++ {nm = fn (y : tf2 t) =>
-                                               Some (make [nm] (f x y))}))
+                                               z <- f x y;
+                                               return (Some (make [nm] z))}))
                         fs)
     end
+
+fun casesDiag [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
+              [r ::: {K}] (fl : folder r)
+    : $(map (fn t :: K => tf1 t -> tf2 t -> tf3 t) r)
+      -> variant (map tf1 r) -> variant (map tf2 r)
+      -> option (variant (map tf3 r)) =
+    @@casesDiagTraverse [tf1] [tf2] [tf3] [r] fl [fn t => t] identity_monad
 
 fun casesDiagU [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
                [r ::: {K}] (fl : folder r)

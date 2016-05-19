@@ -97,37 +97,43 @@ fun team xs proposals =
       | _ => impossible _LOC_
 
 val sm : StateMachine.t _ =
-    {New = fn {State = xs, Effect = ()} => make [#Propose] xs,
+    {New = fn {State = xs, Effect = ()} => return (make [#Propose] xs),
      Propose =
       fn {State = xs, Effect = proposals} =>
-         (if xs.Attempt < 4 then make [#Vote] else make [#Mission])
-             ({Team = team xs proposals} ++ xs),
+         let
+             val xsNext = {Team = team xs proposals} ++ xs
+         in
+             if xs.Attempt < 4 then
+                 return (make [#Vote] xsNext)
+             else
+                 return (make [#Mission] xsNext)
+         end,
      Vote =
       fn {State = xs, Effect = votes} =>
          if passed xs votes then
-             make [#Mission] xs
+             return (make [#Mission] xs)
          else
-             make [#Propose] ({Attempt = xs.Attempt + 1,
-                               Leader = nextLeader xs}
-                              ++ projs xs),
+             return (make [#Propose] ({Attempt = xs.Attempt + 1,
+                                       Leader = nextLeader xs}
+                                      ++ projs xs)),
      Mission =
       fn {State = xs, Effect = actions} =>
          let
              val score = xs.Score + bit (succeeded xs actions)
          in
              if score >= 3 then
-                 make [#Done] {Winner = Resistance, Roles = xs.Roles}
+                 return (make [#Done] {Winner = Resistance, Roles = xs.Roles})
              else if xs.Round - score >= 3 then
-                 make [#Done] {Winner = Spy, Roles = xs.Roles}
+                 return (make [#Done] {Winner = Spy, Roles = xs.Roles})
              else
-                 make [#Propose]
-                      ({Round = xs.Round + 1,
-                        Score = score,
-                        Attempt = 0,
-                        Leader = nextLeader xs}
-                       ++ projs xs)
+                 return (make [#Propose]
+                              ({Round = xs.Round + 1,
+                                Score = score,
+                                Attempt = 0,
+                                Leader = nextLeader xs}
+                               ++ projs xs))
          end,
-     Done = fn {State = xs, Effect = ()} => make [#Done] xs}
+     Done = fn {State = xs, Effect = ()} => return (make [#Done] xs)}
 
 datatype members = All | Subset of list int
 

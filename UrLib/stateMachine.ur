@@ -1,7 +1,8 @@
 open Prelude
 
 type t (states :: {(Type * Type)}) =
-    $(map (fn s => {State : s.1, Effect : s.2} -> variant (map fst states))
+    $(map (fn s => {State : s.1, Effect : s.2}
+                   -> transaction (variant (map fst states)))
           states)
 
 signature Types = sig
@@ -36,16 +37,20 @@ type effect = variant (map snd M.states)
 table sms : {Label : label, State : serialized state} PRIMARY KEY Label
 
 fun next (x : state) (y : effect) =
-    Option.mp (@casesGet fl)
-              (@casesDiag [fst] [snd] [fn _ => state]
-                          fl
-                          (@mp [fn s => {State : s.1, Effect : s.2} -> state]
-                               [fn s => s.1 -> s.2 -> state]
-                               (fn [s] f state effect =>
-                                   f {State = state, Effect = effect})
-                               fl
-                               sm)
-                          x y)
+    statevq <-
+      @casesDiagTraverse [fst] [snd] [fn _ => _]
+                         fl transaction_monad
+                         (@mp [fn s => {State : s.1, Effect : s.2}
+                                       -> transaction state]
+                              [fn s => s.1 -> s.2 -> transaction state]
+                              (fn [s] f state effect =>
+                                  f {State = state, Effect = effect})
+                              fl
+                              sm)
+                         x y;
+    case statevq of
+        None => return None
+      | Some statev => return (Some (@casesGet fl statev))
 
 fun init {Label = label, State = state} =
     Sql.insert sms {Label = label, State = serialize state};
@@ -56,7 +61,8 @@ fun step {Label = label, Effect = effect} =
         val cond = Sql.lookup {Label = label}
     in
         {State = statez} <- oneRow1 (Sql.select sms cond);
-        case next (deserialize statez) effect of
+        stateq <- next (deserialize statez) effect;
+        case stateq of
             None => return None
           | Some state =>
             Sql.update sms cond {State = serialize state};
