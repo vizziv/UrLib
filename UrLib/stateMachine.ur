@@ -16,7 +16,7 @@ signature Input = sig
     include Types
     val fl : folder states
     val sql_label : sql_injectable_prim label
-    val sm : t states
+    val sm : label -> t states
 end
 
 signature Output = sig
@@ -36,7 +36,7 @@ type effect = variant (map snd M.states)
 
 table sms : {Label : label, State : serialized state} PRIMARY KEY Label
 
-fun next (x : state) (y : effect) =
+fun next label (x : state) (y : effect) =
     statevq <-
       @casesDiagTraverse [fst] [snd] [fn _ => _]
                          fl transaction_monad
@@ -46,7 +46,7 @@ fun next (x : state) (y : effect) =
                               (fn [s] f state effect =>
                                   f {State = state, Effect = effect})
                               fl
-                              sm)
+                              (sm label))
                          x y;
     case statevq of
         None => return None
@@ -61,7 +61,7 @@ fun step {Label = label, Effect = effect} =
         val cond = Sql.lookup {Label = label}
     in
         {State = statez} <- oneRow1 (Sql.select sms cond);
-        stateq <- next (deserialize statez) effect;
+        stateq <- next label (deserialize statez) effect;
         case stateq of
             None => return None
           | Some state =>

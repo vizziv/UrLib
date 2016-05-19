@@ -23,7 +23,7 @@ signature Input = sig
     val sql_group : sql_injectable_prim group
     val sql_member : sql_injectable_prim member
     val eq_member : eq member
-    val sm : StateMachine.t states
+    val sm : group -> StateMachine.t states
     val request : group -> requestTranslations
     val response : group -> responseTranslations
 end

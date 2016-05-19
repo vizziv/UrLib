@@ -14,7 +14,7 @@ signature Input = sig
     include Types
     val fl : folder states
     val sql_label : sql_injectable_prim label
-    val sm : t states
+    val sm : label -> t states
 end
 
 signature Output = sig

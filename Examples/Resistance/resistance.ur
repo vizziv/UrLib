@@ -22,16 +22,23 @@ con team = [Team = list int]
 type group = int
 type member = int
 
-fun countBit f : list {Response : bool, Member : member} -> int =
-    List.foldl (fn resp acc => bit (f resp.Response) + acc) 0
-
-val countTrue = countBit id
-val countFalse = countBit not
-
 fun roleOf roles i =
     case List.nth roles i of
         None => impossible _LOC_
       | Some role => role
+
+fun countBit f roles : list {Response : bool, Member : member} -> int =
+    let
+        fun safety resp =
+            case roleOf roles resp.Member of
+                Resistance => True
+              | Spy => resp.Response
+    in
+        List.foldl (fn resp acc => bit (f (safety resp)) + acc) 0
+    end
+
+val countTrue = countBit id
+val countFalse = countBit not
 
 val spies =
     mapiPartial (fn i role =>
@@ -79,7 +86,8 @@ fun missionRequest xs =
       | None => impossible _LOC_
 
 fun passed xs votes =
-    countTrue votes > xs.NumPlayers / 2
+    (* TODO: don't use same counting function for voting and mission. *)
+    countTrue (List.mp (fn _ => Spy) xs.Roles) votes > xs.NumPlayers / 2
 
 fun verify xs =
     List.mapi (fn i action =>
@@ -88,7 +96,7 @@ fun verify xs =
                     | Spy => action)
 
 fun succeeded xs (actions : list {Member : _, Response : _}) =
-    countFalse (verify xs actions) <= bit (xs.Round = 3 && xs.NumPlayers < 7)
+    countFalse xs.Roles (verify xs actions) <= bit (xs.Round = 3 && xs.NumPlayers < 7)
 
 fun team xs proposals =
     case proposals of
@@ -96,7 +104,17 @@ fun team xs proposals =
         if player = xs.Leader then List.sort gt team else impossible _LOC_
       | _ => impossible _LOC_
 
-val sm : StateMachine.t _ =
+datatype message =
+         Proposing of int
+       | Voting of list int
+       | Votes of list {Member : member, Response : bool}
+       | Acting of list int
+       | Actions of {Successes : int, Fails : int}
+       | Victory of {Winner : role, Roles : list role}
+
+structure Bc = Broadcast.Make(struct end)
+
+fun sm group : StateMachine.t _ =
     {New = fn {State = xs, Effect = ()} => return (make [#Propose] xs),
      Propose =
       fn {State = xs, Effect = proposals} =>
@@ -110,6 +128,7 @@ val sm : StateMachine.t _ =
          end,
      Vote =
       fn {State = xs, Effect = votes} =>
+         Bc.tell group (Votes votes);
          if passed xs votes then
              return (make [#Mission] xs)
          else
@@ -121,6 +140,8 @@ val sm : StateMachine.t _ =
          let
              val score = xs.Score + bit (succeeded xs actions)
          in
+             Bc.tell group (Actions {Successes = countTrue xs.Roles actions,
+                                     Fails = countFalse xs.Roles actions});
              if score >= 3 then
                  return (make [#Done] {Winner = Resistance, Roles = xs.Roles})
              else if xs.Round - score >= 3 then
@@ -160,14 +181,6 @@ fun distSame [t] roles {Members = membersq, Request = req : t} =
 
 sequence groups
 
-datatype message =
-         Proposing of int
-       | Voting of list int
-       | Votes of list {Member : member, Response : bool}
-       | Acting of list int
-       | Actions of {Successes : int, Fails : int}
-       | Victory of {Winner : role, Roles : list role}
-
 table games :
       {Group : group,
        NumPlayers : int,
@@ -179,8 +192,6 @@ table players :
        Member : member,
        Channel : channel message}
           PRIMARY KEY (Group, Member)
-
-structure Bc = Broadcast.Make(struct end)
 
 fun request (group : group) =
     {New =
@@ -211,16 +222,8 @@ fun request (group : group) =
 fun response (group : group) =
     {New = fn (_ : list {Member : _, Response : unit}) => return (),
      Propose = @@return [_] [list {Member : _, Response : _}] _,
-     Vote =
-      fn votes =>
-         Bc.tell group (Votes votes);
-         return votes,
-     Mission =
-      fn actions =>
-         (* TODO: make Resistance unable to fail missions. *)
-         Bc.tell group (Actions {Successes = countTrue actions,
-                                 Fails = countFalse actions});
-         return actions,
+     Vote = @@return [_] [list {Member : _, Response : _}] _,
+     Mission = @@return [_] [list {Member : _, Response : _}] _,
      Done = fn (_ : list {Member : _, Response : void}) => return ()}
 
 structure Ursm = UserRequestStateMachine.Make(struct
