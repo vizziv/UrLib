@@ -247,8 +247,8 @@ fun join groupq =
                 let
                     val group = {Group = group}
                 in
-                    {NumPlayers = n, Started = started}
-                    <- oneRow1 (Sql.selectLookup games group);
+                    {NumPlayers = n, Started = started} <-
+                      oneRow1 (Sql.selectLookup games group);
                     if started then
                         impossible _LOC_
                     else
