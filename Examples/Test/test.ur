@@ -47,7 +47,7 @@ fun test _ =
         return <xml>
           <body>
             <h1>ClientRequest Test</h1>
-            <dyn signal={Monad.mp render (Ureq.value connection)}/>
+            {xdyn (Monad.mp render (Ureq.value connection))}
             {Ui.submitButton {Value = "Start listening",
                               Onclick = Ureq.listen connection; rpc start}}
           </body>

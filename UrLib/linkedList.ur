@@ -41,9 +41,9 @@ structure Signal = struct
         let
             fun goLl ll =
                 case ll of
-                    Nil => <xml></xml>
+                    Nil => xempty
                   | Cons cons => <xml>
-                    {xdyn (Monad.mp (compose (Option.get <xml></xml>)
+                    {xdyn (Monad.mp (compose (Option.get xempty)
                                              (Option.mp f))
                                     cons.Carq)}
                     {goSgl cons.Cdr}

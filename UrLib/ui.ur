@@ -14,13 +14,8 @@ fun withSources [ts] (fl : folder ts)
         val gets = @mp [source] [signal] @@signal fl
         val sets = @mp [source] [fn t => t -> tunit] @@set fl
     in
-        <xml>
-          <active code={srcs <- mkSrcs;
-                        return <xml>
-                          <dyn signal={sgl {Get = gets srcs,
-                                            Set = sets srcs}}/>
-                        </xml>}/>
-        </xml>
+        xactive (srcs <- mkSrcs;
+                 return (xdyn (sgl {Get = gets srcs, Set = sets srcs})))
     end
 
 fun submitButtons [r] (fl : folder r) rows =
@@ -38,7 +33,7 @@ fun submitButtons [r] (fl : folder r) rows =
                                                btn (srcs.Set.Show False))
                                            fl rows
                                 else
-                                    <xml></xml>))
+                                    xempty))
     end
 
 fun submitButton row : xbody = submitButtons {Button = row}

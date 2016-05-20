@@ -1,3 +1,5 @@
+open Prelude
+
 (* From the official Ur/Web demo. *)
 
 datatype lines = End | Line of string * source lines
@@ -11,9 +13,9 @@ val new =
 
 fun renderL lines =
     case lines of
-        End => <xml></xml>
+        End => xempty
       | Line (line, linesS) =>
-        <xml>{[line]}<br/><dyn signal={renderS linesS}/></xml>
+        <xml>{[line]}<br/>{xdyn (renderS linesS)}/></xml>
 
 and renderS linesS =
     lines <- signal linesS;

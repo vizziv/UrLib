@@ -314,7 +314,7 @@ fun formNew (infoSrc : source _) sr = <xml>
       | Some spies =>
         "You're a Spy. The spies are " ^ Misc.showList spies ^ "."]}
   {Ui.submitButton {Value = "Got it", Onclick = sr.Submit ()}}
-  <active code={set infoSrc sr.Request; return <xml></xml>}/>
+  {xactive (set infoSrc sr.Request; return xempty)}
 </xml>
 
 fun formPropose sr =
@@ -329,7 +329,7 @@ fun formPropose sr =
                 return (Ui.submitButton {Value = "Propose",
                                          Onclick = sr.Submit team})
             else
-                return <xml></xml>
+                return xempty
     in
         return <xml>
           {List.mapX (fn src => <xml>
@@ -338,7 +338,7 @@ fun formPropose sr =
                      max={float (numPlayers - 1)}
                      step={1.0}/>
           </xml>) srcs}
-          <dyn signal={sgl}/>
+          {xdyn sgl}
         </xml>
     end
 
@@ -352,10 +352,7 @@ fun renderForm (infoSrc : source _) srvq =
       | Some srv =>
         match srv
               {New = formNew infoSrc,
-               Propose =
-                fn sr => <xml>
-                  <active code={formPropose sr}/>
-                </xml>,
+               Propose = compose xactive formPropose,
                Vote =
                 fn sr => <xml>
                   Proposed team is {[Misc.showList sr.Request]}.<br/>
@@ -385,12 +382,12 @@ fun play groupq () : transaction page =
         {case groupq of
              None => Ui.submitButton {Value = "Start",
                                       Onclick = rpc (start j.Group)}
-           | Some _ => <xml></xml>}
-        <dyn signal={Monad.mp (renderForm infoSrc) (Ursm.value j.CxnUrsm)}/>
+           | Some _ => xempty}
+        {xdyn (Monad.mp (renderForm infoSrc) (Ursm.value j.CxnUrsm))}
         <hr/>
-        <dyn signal={Monad.mp renderInfo (signal infoSrc)}/>
+        {xdyn (Monad.mp renderInfo (signal infoSrc))}
         <hr/>
-        <dyn signal={Buffer.render b}/>
+        {xdyn (Buffer.render b)}
       </body>
     </xml>
 
