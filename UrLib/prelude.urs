@@ -53,12 +53,6 @@ val bit : bool -> int
 val maximum : t ::: Type -> ord t -> t -> list t -> t
 val minimum : t ::: Type -> ord t -> t -> list t -> t
 
-val cases : ts ::: {Type} -> u ::: Type
-            -> $(map (fn t => t -> u) ts) -> variant ts -> u
-
-val casesGet : K --> r ::: {K} -> folder r -> t ::: Type
-               -> variant (map (fn _ => t) r) -> t
-
 val proj : nm :: Name -> t ::: Type -> drop ::: {Type} -> [[nm] ~ drop]
            => $([nm = t] ++ drop) -> t
 
@@ -80,6 +74,9 @@ val snoc : ts ::: {Type} -> $ts
 
 val spawnListener : t ::: Type -> (t -> tunit) -> channel t -> tunit
 
+val xdyn : ctx ::: {Unit} -> [[Dyn] ~ ctx]
+           => signal (xml ([Dyn] ++ ctx) [] []) -> (xml ([Dyn] ++ ctx) [] [])
+
 val mapiPartial : a ::: Type -> b ::: Type
                   -> (int -> a -> option b) -> list a -> list b
 
@@ -98,6 +95,12 @@ val mapNm : K --> tf1 :: (K -> Type) -> tf2 :: ({K} -> K -> Type)
                 -> equal r ([nm = t] ++ others)
                 -> tf1 t -> tf2 ([nm = t] ++ others) t)
             -> $(map tf1 r) -> $(map (tf2 r) r)
+
+val cases : ts ::: {Type} -> u ::: Type
+            -> $(map (fn t => t -> u) ts) -> variant ts -> u
+
+val casesGet : K --> r ::: {K} -> folder r -> t ::: Type
+               -> variant (map (fn _ => t) r) -> t
 
 val casesFunctor : r ::: {Type} -> folder r
                    -> f ::: (Type -> Type) -> Functor.t f

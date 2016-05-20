@@ -46,14 +46,6 @@ fun bit b = if b then 1 else 0
 fun maximum [t] (_ : ord t) : t -> list t -> t = List.foldl max
 fun minimum [t] (_ : ord t) : t -> list t -> t = List.foldl min
 
-fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
-
-fun casesGet [K] [r ::: {K}] (fl : folder r) [t ::: Type] =
-    @@cases [map (fn _ => t) r] [t]
-            (@map0 [fn _ => t -> t] (fn [ignore ::_] => id) fl)
-
-val contradiction = fn [t] => cases {}
-
 fun proj [nm ::_] [t] [drop] [[nm] ~ drop] (xs : $([nm = t] ++ drop)) = xs.nm
 
 val proj1 = fn [nm] [t] => proj [nm]
@@ -76,6 +68,8 @@ fun spawnListener [t] (action : t -> tunit) (chan : channel t) =
     in
         spawn (loop ())
     end
+
+fun xdyn [ctx] [[Dyn] ~ ctx] sgl = <xml><dyn signal={sgl}/></xml>
 
 fun mapiPartial [a] [b] (f : int -> a -> option b) =
     let
@@ -159,6 +153,8 @@ fun mapNm [K] [tf1 :: K -> Type] [tf2 :: {K} -> K -> Type]
            (fn [todo :: {K}] [[] ~ todo] _ _ => {FlDone = Folder.nil, MapF = fn {} => {}})
            fl [[]] ! Folder.nil refl).MapF
 
+fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
+
 structure Functor  : sig
     class t :: (Type -> Type) -> Type
     val mk : f ::: (Type -> Type)
@@ -202,6 +198,12 @@ fun choice [nm ::_] [ts] [[nm] ~ ts] (fl : folder ts) [a] [b] (f : a -> b)
 fun compose [f] [g] (mpf : t f) (mpg : t g) [a] [b] = Top.compose mpf mpg
 
 end
+
+fun casesGet [K] [r ::: {K}] (fl : folder r) [t ::: Type] =
+    @@cases [map (fn _ => t) r] [t]
+            (@map0 [fn _ => t -> t] (fn [ignore ::_] => id) fl)
+
+val contradiction = fn [t] => cases {}
 
 fun casesFunctor [r ::: {Type}] (fl : folder r)
                  [f ::: Type -> Type] (_ : Functor.t f) =
