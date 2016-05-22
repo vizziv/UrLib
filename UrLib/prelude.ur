@@ -1,18 +1,12 @@
 signature Types = sig
     type tunit = transaction unit
-    type acceptor t = t -> tunit
     con compose = K1 ==> K2 ==> K3 ==>
      fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
     con forget = K ==> fn (t :: K) => ()
-    con equal :: K --> K -> K -> Type
     type void
 end
 
 structure T : Types
-    where con equal = K ==>
-           fn a b =>
-              {CastL : f :: (K -> Type) -> f b -> f a,
-               CastR : f :: (K -> Type) -> f a -> f b}
     where type void = variant [] = struct end
 
 open T
@@ -26,14 +20,6 @@ fun zip [a] [b] [c] (f : a -> b -> c) (xs : list a) (ys : list b) : list c =
         ([], _) => []
       | (_, []) => []
       | (x :: xs', y :: ys') => f x y :: zip f xs' ys'
-
-val refl : K --> a ::: K -> equal a a =
- fn [K] [a] =>
-    {CastL = fn [tf :: K -> Type] => id,
-     CastR = fn [tf :: K -> Type] => id}
-
-fun castL [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastL
-fun castR [K] [a ::: K] [b ::: K] (pf : equal a b) = pf.CastR
 
 fun impossible [t] loc : t =
     error <xml>The allegedly impossible has occurred at {[loc]}.</xml>
@@ -91,71 +77,71 @@ fun mapNm0 [K] [tf :: {K} -> K -> Type]
            [r ::: {K}] (fl : folder r)
            (f : others :: {K} -> nm :: Name -> t ::: K
                 -> [[nm] ~ others] => folder others
-                -> equal r ([nm = t] ++ others)
+                -> Eq.t ([nm = t] ++ others) r
                 -> tf ([nm = t] ++ others) t)
     : $(map (tf r) r) =
     (@fold [fn done :: {K} =>
                todo :: {K} -> [done ~ todo] => folder todo
-               -> equal r (done ++ todo)
+               -> Eq.t (done ++ todo) r
                -> {FlDone : folder done,
                    MapF : $(map (tf (done ++ todo)) done)}]
            (fn [nm :: Name] [t :: K] [done :: {K}] [[nm] ~ done]
                (acc : todo :: {K} -> [done ~ todo] => folder todo
-                      -> equal r (done ++ todo)
+                      -> Eq.t (done ++ todo) r
                       -> {FlDone : folder done,
                           MapF : $(map (tf (done ++ todo)) done)})
                [todo :: {K}] [done ++ [nm = t] ~ todo] (flTodo : folder todo)
-               (cast : equal r (done ++ [nm = t] ++ todo)) =>
+               (pf : Eq.t (done ++ [nm = t] ++ todo) r) =>
                let
                    val acc = @acc [[nm = t] ++ todo] !
                                   (@Folder.cons [nm] [t] ! flTodo)
-                                  cast
+                                  pf
                in
                    {FlDone = @Folder.cons [nm] [t] ! acc.FlDone,
                     MapF = acc.MapF
                         ++ {nm = @f [done ++ todo] [nm] !
                                     (@Folder.concat ! acc.FlDone flTodo)
-                                    cast}}
+                                    pf}}
                end)
            (fn [todo :: {K}] [[] ~ todo] (_ : folder todo) _ =>
                {FlDone = Folder.nil, MapF = {}})
-           fl [[]] ! Folder.nil refl).MapF
+           fl [[]] ! Folder.nil Eq.refl).MapF
 
 fun mapNm [K] [tf1 :: K -> Type] [tf2 :: {K} -> K -> Type]
           [r ::: {K}] (fl : folder r)
           (f : others :: {K} -> nm :: Name -> t ::: K
                -> [[nm] ~ others] => folder others
-               -> equal r ([nm = t] ++ others)
+               -> Eq.t ([nm = t] ++ others) r
                -> tf1 t -> tf2 ([nm = t] ++ others) t)
     : $(map tf1 r) -> $(map (tf2 r) r) =
     (@fold [fn done :: {K} =>
                todo :: {K} -> [done ~ todo] => folder todo
-               -> equal r (done ++ todo)
+               -> Eq.t (done ++ todo) r
                -> {FlDone : folder done,
                    MapF : $(map tf1 done) -> $(map (tf2 (done ++ todo)) done)}]
            (fn [nm :: Name] [t :: K] [done :: {K}] [[nm] ~ done]
                (acc : todo :: {K} -> [done ~ todo] => folder todo
-                      -> equal r (done ++ todo)
+                      -> Eq.t (done ++ todo) r
                       -> {FlDone : folder done,
                           MapF : $(map tf1 done)
                                  -> $(map (tf2 (done ++ todo)) done)})
                [todo :: {K}] [done ++ [nm = t] ~ todo] (fl_todo : folder todo)
-               (cast : equal r (done ++ [nm = t] ++ todo)) =>
+               (pf : Eq.t (done ++ [nm = t] ++ todo) r) =>
                let
                    val acc =
                        @acc [[nm = t] ++ todo] !
                             (@Folder.cons [nm] [t] ! fl_todo)
-                            cast
+                            pf
                in
                    {FlDone = @Folder.cons [nm] [t] ! acc.FlDone,
                     MapF = fn (x : $(map tf1 (done ++ [nm = t]))) =>
                               acc.MapF (x -- nm)
                               ++ {nm = @f [done ++ todo] [nm] !
                                           (@Folder.concat ! acc.FlDone fl_todo)
-                                          cast x.nm}}
+                                          pf x.nm}}
                end)
            (fn [todo :: {K}] [[] ~ todo] _ _ => {FlDone = Folder.nil, MapF = fn {} => {}})
-           fl [[]] ! Folder.nil refl).MapF
+           fl [[]] ! Folder.nil Eq.refl).MapF
 
 fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
 

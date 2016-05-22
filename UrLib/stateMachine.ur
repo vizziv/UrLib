@@ -37,17 +37,17 @@ type effect = variant (map snd M.states)
 table sms : {Label : label, State : serialized state} PRIMARY KEY Label
 
 fun next label (x : state) (y : effect) =
-    statevq <-
-      @casesDiagTraverse [fst] [snd] [fn _ => _]
-                         fl transaction_monad
-                         (@mp [fn s => {State : s.1, Effect : s.2}
-                                       -> transaction state]
-                              [fn s => s.1 -> s.2 -> transaction state]
-                              (fn [s] f state effect =>
-                                  f {State = state, Effect = effect})
-                              fl
-                              (sm label))
-                         x y;
+    statevq
+    <- @casesDiagTraverse [fst] [snd] [fn _ => _]
+                          fl transaction_monad
+                          (@mp [fn s => {State : s.1, Effect : s.2}
+                                        -> transaction state]
+                               [fn s => s.1 -> s.2 -> transaction state]
+                               (fn [s] f state effect =>
+                                   f {State = state, Effect = effect})
+                               fl
+                               (sm label))
+                          x y;
     case statevq of
         None => return None
       | Some statev => return (Some (@casesGet fl statev))

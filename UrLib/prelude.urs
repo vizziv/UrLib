@@ -1,10 +1,8 @@
 signature Types = sig
     type tunit = transaction unit
-    type acceptor t = t -> tunit
     con compose = K1 ==> K2 ==> K3 ==>
      fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
     con forget = K ==> fn (t :: K) => ()
-    con equal :: K --> K -> K -> Type
     type void
 end
 
@@ -17,13 +15,6 @@ val on : a ::: Type -> b ::: Type -> c ::: Type
 
 val zip : a ::: Type -> b ::: Type -> c ::: Type
           -> (a -> b -> c) -> list a -> list b -> list c
-
-val refl : K --> a ::: K -> equal a a
-
-val castL : K --> a ::: K -> b ::: K
-            -> equal a b -> f :: (K -> Type) -> f b -> f a
-val castR : K --> a ::: K -> b ::: K
-            -> equal a b -> f :: (K -> Type) -> f a -> f b
 
 val contradiction : t ::: Type -> void -> t
 
@@ -88,7 +79,7 @@ val mapNm0 : K --> tf :: ({K} -> K -> Type)
              -> r ::: {K} -> folder r
              -> (others :: {K} -> nm :: Name -> t ::: K
                  -> [[nm] ~ others] => folder others
-                 -> equal r ([nm = t] ++ others)
+                 -> Eq.t ([nm = t] ++ others) r
                  -> tf ([nm = t] ++ others) t)
              -> $(map (tf r) r)
 
@@ -96,7 +87,7 @@ val mapNm : K --> tf1 :: (K -> Type) -> tf2 :: ({K} -> K -> Type)
             -> r ::: {K} -> folder r
             -> (others :: {K} -> nm :: Name -> t ::: K
                 -> [[nm] ~ others] => folder others
-                -> equal r ([nm = t] ++ others)
+                -> Eq.t ([nm = t] ++ others) r
                 -> tf1 t -> tf2 ([nm = t] ++ others) t)
             -> $(map tf1 r) -> $(map (tf2 r) r)
 

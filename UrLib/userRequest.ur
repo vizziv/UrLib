@@ -170,12 +170,12 @@ fun subscribeListeners connection listeners =
                    [fn hs h => h.1 -> tunit]
                    fl
                    (fn [others ::_] [nm ::_] [h]
-                       [[nm] ~ others] _ (pf : equal _ _)
+                       [[nm] ~ others] _ (pf : Eq.t _ _)
                        l0 =>
                        l0 (fn resp =>
                               answer user job
-                                     (castL pf [fn hs => variant (map snd hs)]
-                                            (make [nm] resp))))
+                                     (Eq.cast pf [compose variant (map snd)]
+                                              (make [nm] resp))))
                    listeners
     in
         spawnListener (fn {Job = job, Request = req} =>
@@ -192,19 +192,19 @@ type submitRequest = subReq handlers
 
 fun listen (connection : connection) =
     let
-        fun f [others ::_] [nm ::_] [h] [[nm] ~ others] _ (pf : equal _ _)
+        fun f [others ::_] [nm ::_] [h] [[nm] ~ others] _ (pf : Eq.t _ _)
               (submit : h.2 -> tunit) (req : h.1) =
             let
                 val src = connection.Source
             in
                 set src
-                    (Some (castL pf [subReq]
-                                 (make [nm]
-                                       {Submit =
-                                         fn resp =>
-                                            set src None;
-                                            submit resp,
-                                        Request = req})))
+                    (Some (Eq.cast pf [subReq]
+                                   (make [nm]
+                                         {Submit =
+                                           fn resp =>
+                                              set src None;
+                                              submit resp,
+                                          Request = req})))
             end
         val listeners =
             @mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] fl f

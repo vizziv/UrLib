@@ -187,12 +187,6 @@ table games :
        Started : bool}
           PRIMARY KEY Group
 
-table players :
-      {Group : group,
-       Member : member,
-       Channel : channel message}
-          PRIMARY KEY (Group, Member)
-
 fun request (group : group) =
     {New =
       fn xs =>
@@ -247,8 +241,8 @@ fun join groupq =
                 let
                     val group = {Group = group}
                 in
-                    {NumPlayers = n, Started = started} <-
-                        oneRow1 (Sql.selectLookup games group);
+                    {NumPlayers = n, Started = started}
+                    <- oneRow1 (Sql.selectLookup games group);
                     if started then
                         impossible _LOC_
                     else
@@ -266,8 +260,8 @@ fun start group =
     let
         val group = {Group = group}
     in
-        {NumPlayers = n, Started = started} <-
-            oneRow1 (Sql.selectLookup games group);
+        {NumPlayers = n, Started = started}
+        <- oneRow1 (Sql.selectLookup games group);
         if started then
             return ()
         else

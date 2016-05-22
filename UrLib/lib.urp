@@ -1,6 +1,7 @@
 $/list
 $/option
 $/monad
+eq
 prelude
 misc
 sql

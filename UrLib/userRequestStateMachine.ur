@@ -70,9 +70,9 @@ con responses (hs :: {(Type * Type * Type * Type)}) =
 fun cont (group : group) (ask : _ -> tunit) =
     @mapNm0 [fn hs h => list {Member : member, Response : h.2} -> tunit] fl
             (fn [others ::_] [nm ::_] [h] [[nm] ~ others] _
-                (pf : equal handlerStates ([nm = h] ++ others)) resps =>
-                resp <- translateResponse group (castL pf [responses]
-                                                       (make [nm] resps));
+                (pf : Eq.t _ _) resps =>
+                resp <- translateResponse group (Eq.cast pf [responses]
+                                                         (make [nm] resps));
                 stateq <- Sm.step {Label = group, Effect = resp};
                 case stateq of
                     None => impossible _LOC_
