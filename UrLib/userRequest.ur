@@ -67,10 +67,10 @@ table users :
           PRIMARY KEY (Group, Member)
 
 type connection =
-     {Group : _,
-      Member : _,
-      Key : _,
-      Channel : channel _,
+     {Group : group,
+      Member : member,
+      Key : int,
+      Channel : channel {Job : int, Request : request},
       Source : source _}
 
 val groupOf = proj [#Group]

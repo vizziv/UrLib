@@ -45,7 +45,7 @@ fun select [vals ::: {Type}] [others ::: {Type}] [vals ~ others]
     end
 
 con lookupAcc (tabs :: {{Type}}) (agg :: {{Type}}) (exps :: {Type})
-             (others :: {Type}) (tab :: Name) (r :: {Type}) =
+              (others :: {Type}) (tab :: Name) (r :: {Type}) =
     rest :: {Type}
     -> [[tab] ~ tabs] => [r ~ others] => [rest ~ r] => [rest ~ others]
     => sql_exp ([tab = r ++ rest ++ others] ++ tabs) agg exps bool
@@ -112,3 +112,48 @@ fun deleteLookup [keys ::: {Type}] [others ::: {Type}] [uniques ::: {{Unit}}]
                  (fl : folder keys) (injs : $(map sql_injectable keys))
                  (tab : sql_table (keys ++ others) uniques) (ks : $keys) =
     delete tab (@lookup ! ! fl injs ks)
+
+con compatAcc (tabs :: {{Type}}) (agg :: {{Type}}) (exps :: {Type})
+              (others :: {Type}) (tab :: Name) (r :: {Type}) =
+    rest :: {Type}
+    -> [[tab] ~ tabs] => [r ~ others] => [rest ~ r] => [rest ~ others]
+    => sql_exp ([tab = map option (r ++ rest) ++ others] ++ tabs) agg exps bool
+
+fun compat [tabs ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
+           [tab ::: Name] [keys ::: {Type}] [others ::: {Type}]
+           [keys ~ others] [[tab] ~ tabs]
+           (fl : folder keys) (injs : $(map sql_injectable_prim keys))
+           (kqs : $(map option keys))
+    : sql_exp ([tab = (map option keys) ++ others] ++ tabs) agg exps bool =
+    let
+        fun equality [nm :: Name] [t :: Type]
+                     [r :: {Type}] [[nm] ~ r]
+                     (_ : sql_injectable_prim t) (kq : option t)
+                     (acc : compatAcc tabs agg exps others tab r)
+                     [rest :: {Type}]
+                     [[tab] ~ tabs] [[nm = t] ++ r ~ others]
+                     [rest ~ [nm = t] ++ r] [rest ~ others] =
+            let
+                val accNew = acc [[nm = t] ++ rest]
+            in
+                case kq of
+                    None => accNew
+                  | Some _ =>
+                    (SQL ({{tab}}.{nm} IS NULL OR {{tab}}.{nm} = {[kq]})
+                     AND {accNew})
+            end
+    in
+        @foldR2 [sql_injectable_prim] [option]
+                [compatAcc tabs agg exps others tab]
+                equality
+                (fn [rest ::_] [_~_] [_~_] [_~_] [_~_] => (SQL TRUE))
+                fl injs kqs [[]] ! ! ! !
+    end
+
+fun selectCompat [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
+                 [keys ~ vals] [keys ~ others] [vals ~ others]
+                 (fl : folder keys) (injs : $(map sql_injectable_prim keys))
+                 [tabl] (_ : fieldsOf tabl (map option keys ++ vals ++ others))
+                 (tab : tabl) (kqs : $(map option keys)) =
+    @@select [vals] [map option keys ++ others] ! [_] _
+             tab (@compat ! ! fl injs kqs)
