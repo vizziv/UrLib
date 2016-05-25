@@ -97,9 +97,8 @@ val connect =
                         listeners ({chan = ch} ++ q.Fieldqs);
             rows <- queryL1 (q.Sql tab);
             LinkedList.Source.mk (Eq.cast q.PfA [list] rows)
-
     in
-        fn q => @@exDisj_elim [isQuery fields a] q [_] @@go
+        fn q => @@exDisj_elim [isQuery fields a] q [_] go
     end
 
 (* fun value [a] (cxn : connection a) = LinkedList.Source.value cxn.Source *)
