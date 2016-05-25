@@ -12,6 +12,7 @@ end
 
 structure Source : sig
     con t :: Type -> Type
+    val mk : a ::: Type -> list a -> transaction (t a)
     val value : a ::: Type -> t a -> Signal.t a
     val insert : a ::: Type -> a -> t a -> tunit
     val update : a ::: Type -> (a -> a) -> (a -> bool) -> t a -> tunit

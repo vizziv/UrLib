@@ -15,7 +15,7 @@ fun lookup [keys] [others] [keys ~ others]
 
 con isQuery fields a keep drop =
     [keep ~ drop]
-    => {Query : sql_table fields [] -> sql_query [] [] [T = keep] [],
+    => {Sql : sql_table fields [] -> sql_query [] [] [T = keep] [],
         Fieldqs : $(map option fields),
         Fl : folder keep,
         PfA : Eq.t $keep a,
@@ -29,7 +29,7 @@ fun select [keep] [drop] [keep ~ drop]
     : query (keep ++ drop) $keep =
     @exDisj_intro [isQuery (keep ++ drop) $keep] [keep] [drop] !
                   (fn [_~_] =>
-                      {Query = fn tab => Sql.select tab filter.Sql,
+                      {Sql = fn tab => Sql.select tab filter.Sql,
                        Fieldqs = filter.Fieldqs,
                        Fl = fl,
                        PfFields = Eq.refl,
@@ -87,19 +87,20 @@ val injsListeners : $(map sql_injectable
     ++ @mp [sql_injectable_prim] [compose sql_injectable option]
            @@sql_option_prim fl sql_fields
 
-(* val connect = *)
-(*  fn [a] => *)
-(*     let *)
-(*         fun go [other ::_] [keep ::_] [other ~ keep] *)
-(*                (q : isQuery fields a other keep) : transaction (list a) = *)
-(*             ch <- channel; *)
-(*             @Sql.insert flListeners injsListeners *)
-(*                         listeners ({chan = ch} ++ q.Filter); *)
-(*             Eq.cast q.PfA [compose transaction list] *)
-(*                     (queryL1 (Sql.select tab q.Filter)) *)
-(*     in *)
-(*         fn q => @@exDisj_elim [isQuery fields a] q [_] @@go *)
-(*     end *)
+val connect =
+ fn [a] =>
+    let
+        fun go [other ::_] [keep ::_] [other ~ keep]
+               (q : isQuery fields a other keep) =
+            ch <- channel;
+            @Sql.insert flListeners injsListeners
+                        listeners ({chan = ch} ++ q.Fieldqs);
+            rows <- queryL1 (q.Sql tab);
+            LinkedList.Source.mk (Eq.cast q.PfA [list] rows)
+
+    in
+        fn q => @@exDisj_elim [isQuery fields a] q [_] @@go
+    end
 
 (* fun value [a] (cxn : connection a) = LinkedList.Source.value cxn.Source *)
 
