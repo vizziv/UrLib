@@ -13,27 +13,16 @@ fun lookup [keys] [others] [keys ~ others]
      Fieldqs = @map0 [_] (fn [t ::_] => None) flOthers
                ++ @mp [ident] [option] @@Some flKeys ks}
 
-con isQuery fields a keep drop =
-    [keep ~ drop]
-    => {Sql : sql_table fields [] -> sql_query [] [] [T = keep] [],
-        Fieldqs : $(map option fields),
-        Fl : folder keep,
-        PfA : Eq.t $keep a,
-        PfFields : Eq.t (keep ++ drop) fields}
-
-con query fields a = exDisj (isQuery fields a)
+con query fields a =
+    {Sql : sql_table fields [] -> sql_query [] [] [T = keep] [],
+     Fieldqs : $(map option fields)}
 
 fun select [keep] [drop] [keep ~ drop]
            (fl : folder keep)
            (filter : filter (keep ++ drop))
     : query (keep ++ drop) $keep =
-    @exDisj_intro [isQuery (keep ++ drop) $keep] [keep] [drop] !
-                  (fn [_~_] =>
-                      {Sql = fn tab => Sql.select tab filter.Sql,
-                       Fieldqs = filter.Fieldqs,
-                       Fl = fl,
-                       PfFields = Eq.refl,
-                       PfA = Eq.refl})
+    {Sql = fn tab => Sql.select tab filter.Sql,
+     Fieldqs = filter.Fieldqs}
 
 signature Types = sig
     con fields :: {Type}
@@ -76,7 +65,7 @@ table tab : fields
 table listeners : ([chan = channel message] ++ fieldqs)
 
 con connection a =
-    {Chan : channel message, Source : LinkedList.Source.t a}
+    {Channel : channel message, Source : LinkedList.Source.t a}
 
 val flListeners : folder ([chan = channel message] ++ fieldqs) =
     @Folder.cons [chan] [channel message] ! (@Folder.mp fl)
@@ -96,11 +85,34 @@ val connect =
             @Sql.insert flListeners injsListeners
                         listeners ({chan = ch} ++ q.Fieldqs);
             rows <- queryL1 (q.Sql tab);
-            LinkedList.Source.mk (Eq.cast q.PfA [list] rows)
+            ll <- LinkedList.Source.mk (Eq.cast q.PfA [list] rows);
+            return {Channel = ch, Source = ll}
     in
         fn q => @@exDisj_elim [isQuery fields a] q [_] go
     end
 
-(* fun value [a] (cxn : connection a) = LinkedList.Source.value cxn.Source *)
+(* fun listen [a] (cxn : connection a) = *)
+(*     let *)
+(*         val ll = cxn.Source *)
+(*         val compat = *)
+(*             @foldR3 [eq] [option] [ident] [fn _ => bool] *)
+(*                     (fn [nm ::_] [t ::_] [rest ::_] [_~_] *)
+(*                         (_ : eq t) xq y acc => *)
+(*                         case xq of *)
+(*                             None => acc *)
+(*                           | Some x => acc && x = y) *)
+(*                     True *)
+(*                     fl eq_fields *)
+(*         fun go msg = *)
+(*             case msg of *)
+(*                 Insert xs => LinkedList.Source.insert xs ll *)
+(*               | Update u => *)
+(*                 LinkedList.Source.update (modify u.Values) (compat u.Filter) ll *)
+(*               | Delete xqs => LinkedList.Source.delete (compat xqs) ll *)
+(*     in *)
+(*         spawnListener go cxn.Channel *)
+(*     end *)
+
+fun value [a] (cxn : connection a) = LinkedList.Source.value cxn.Source
 
 end

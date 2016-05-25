@@ -19,6 +19,7 @@ signature Input = sig
     con chan :: Name
     constraint [chan] ~ fields
     val fl : folder fields
+    val eq_fields : $(map eq fields)
     val sql_fields : $(map sql_injectable_prim fields)
 end
 
