@@ -90,7 +90,7 @@ fun listen [keep] (sub : Subset.t fields keep) (cxn : connection keep) =
         val ll = cxn.Source
         fun compat (xqs : $fieldqs) (ys : $keep) =
             Subset.elim
-                (fn [drop] [keep ~ drop] flKeep _ (pf : Eq.t fields _) =>
+                (fn [drop] [keep ~ drop] flKeep _ (_ : Eq.t fields _) =>
                     @foldR3 [eq] [option] [ident] [fn _ => bool]
                             (fn [nm ::_] [t ::_] [rest ::_] [[nm] ~ rest]
                                 (_ : eq t) xq y acc =>
@@ -99,13 +99,10 @@ fun listen [keep] (sub : Subset.t fields keep) (cxn : connection keep) =
                                   | Some x => acc && x = y)
                             True
                             flKeep
-                            (Subset.projs eq_fields)
-                            (Subset.projs xqs)
-                            ys)
+                            (Subset.projs eq_fields) (Subset.projs xqs) ys)
         fun modify (xqs : $fieldqs) (ys : $keep) =
-            @Subset.elim
-                sub
-                (fn [drop] [keep ~ drop] flKeep _ pf =>
+            Subset.elim
+                (fn [drop] [keep ~ drop] flKeep _ (pf : Eq.t fields _) =>
                     @foldR2 [option] [ident] [record]
                             (fn [nm ::_] [t ::_] [rest ::_] [[nm] ~ rest]
                                 xq y acc =>
@@ -114,9 +111,7 @@ fun listen [keep] (sub : Subset.t fields keep) (cxn : connection keep) =
                                   | Some x => acc ++ {nm = x})
                             {}
                             flKeep
-                            (projs (Eq.cast pf [compose record (map option)]
-                                            xqs))
-                            ys)
+                            (Subset.projs xqs) ys)
         fun go msg =
             case msg of
                 Insert xs => LinkedList.Source.insert (Subset.projs xs) ll
