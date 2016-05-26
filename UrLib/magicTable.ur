@@ -102,7 +102,7 @@ fun listen [keep] (sub : Subset.t fields keep) (cxn : connection keep) =
                             (Subset.projs eq_fields) (Subset.projs xqs) ys)
         fun modify (xqs : $fieldqs) (ys : $keep) =
             Subset.elim
-                (fn [drop] [keep ~ drop] flKeep _ (pf : Eq.t fields _) =>
+                (fn [drop] [keep ~ drop] flKeep _ (_ : Eq.t fields _) =>
                     @foldR2 [option] [ident] [record]
                             (fn [nm ::_] [t ::_] [rest ::_] [[nm] ~ rest]
                                 xq y acc =>
