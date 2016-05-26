@@ -4,8 +4,8 @@ val intro : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
             => folder keep -> folder drop
             -> t (keep ++ drop) keep
 
-(* val mp : fields ::: {Type} -> keep ::: {Type} -> f ::: (Type -> Type) *)
-(*          -> t fields keep -> t (map f fields) (map f keep) *)
+val mp : fields ::: {Type} -> keep ::: {Type} -> f ::: (Type -> Type)
+         -> t fields keep -> t (map f fields) (map f keep)
 
 val elim : fields ::: {Type} -> keep ::: {Type}
            -> t fields keep

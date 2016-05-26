@@ -2,8 +2,8 @@ $/list
 $/option
 $/monad
 eq
-subset
 prelude
+subset
 misc
 sql
 ui
