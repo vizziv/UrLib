@@ -66,8 +66,8 @@ table tab : fields
 
 table listeners : ([chan = channel message] ++ fieldqs)
 
-con connection a =
-    {Channel : channel message, Source : LinkedList.Source.t a}
+con connection (keep :: {Type}) =
+    {Channel : channel message, Source : LinkedList.Source.t $keep}
 
 val flListeners : folder ([chan = channel message] ++ fieldqs) =
     @Folder.cons [chan] [channel message] ! (@Folder.mp fl)
@@ -78,14 +78,14 @@ val injsListeners : $(map sql_injectable
     ++ @mp [sql_injectable_prim] [compose sql_injectable option]
            @@sql_option_prim fl sql_fields
 
-fun connect [keep] (q : query fields keep) =
+fun connect [keep] (q : query fields keep) : transaction (connection keep) =
     ch <- channel;
     @Sql.insert flListeners injsListeners
                 listeners ({chan = ch} ++ q.Fieldqs);
-    ll <- LinkedList.Source.mk (fn [t] => query (q.Sql tab));
+    ll <- LinkedList.Source.mk (queryI1 (q.Sql tab));
     return {Channel = ch, Source = ll}
 
-fun listen [keep] (sub : Subset.t fields keep) (cxn : connection $keep) =
+fun listen [keep] (sub : Subset.t fields keep) (cxn : connection keep) =
     let
         val ll = cxn.Source
         fun compat (xqs : $fieldqs) (ys : $keep) =
@@ -130,6 +130,6 @@ fun listen [keep] (sub : Subset.t fields keep) (cxn : connection $keep) =
         spawnListener go cxn.Channel
     end
 
-fun value [a] (cxn : connection a) = LinkedList.Source.value cxn.Source
+fun value [keep] (cxn : connection keep) = LinkedList.Source.value cxn.Source
 
 end

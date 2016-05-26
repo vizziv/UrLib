@@ -63,16 +63,20 @@ structure Source = struct
 
     con t a = {First : source (ll a), Last : source (source (ll a))}
 
-    fun mk [a] (foldlM : b ::: Type
-                         -> (a -> b -> transaction b) -> b -> transaction b)
+    fun mk [a] (exec : (a -> tunit) -> tunit)
         : transaction (t a) =
+        first <- source Nil;
+        last <- source first;
         let
-            fun go (x : a) acc =
+            fun go (x : a) =
                 carq <- source (Some x);
-                source (Cons {Carq = carq, Cdr = acc})
+                nil <- source Nil;
+                cons <- get last;
+                set cons (Cons {Carq = carq, Cdr = nil});
+                set last nil
         in
-            z <- source Nil;
-            Monad.exec {First = foldlM go z, Last = source z}
+            exec go;
+            return {First = first, Last = last}
         end
 
     fun value [a] (t : t a) : Signal.t a =
