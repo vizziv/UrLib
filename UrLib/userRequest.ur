@@ -13,7 +13,7 @@ signature Types = sig
     type group
     type member
     type requests =
-         variant (map (fn h => list {Member : member, Request : h.1}) handlers)
+         variant (map (fn h => list {Member : member, Request : fst h}) handlers)
 end
 
 signature Input = sig
@@ -92,13 +92,13 @@ fun instantiate [tf] job variant =
     {Instance = Some (serialize (@casesMapU [tf] [fn _ => int] fl
                                             (fn [t] _ => job) variant))}
 
-fun ask group request =
+fun ask group (requests : requests) =
     let
         val reqs =
             @casesFunctor (@Folder.mp fl)
                           (@Functor.compose Functor.list
                                             (Functor.field [#Request]))
-                          request
+                          requests
         val members = List.mp (proj [#Member]) reqs
         val cond = (SQL T.Group = {[group]}
                     AND {Sql.lookups (List.mp (snoc {} [#Member]) members)})
@@ -109,7 +109,7 @@ fun ask group request =
     in
         job <- nextval jobs;
         let
-            val instance = instantiate job request
+            val instance = instantiate job requests
         in
             queryI1 (Sql.select users cond)
                     (fn {Member = member, Channel = chan} =>

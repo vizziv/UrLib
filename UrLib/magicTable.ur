@@ -13,14 +13,14 @@ fun lookup [keys] [others] [keys ~ others]
      Fieldqs = @map0 [_] (fn [t ::_] => None) flOthers
                ++ @mp [ident] [option] @@Some flKeys ks}
 
-con query fields a =
+con query fields keep =
     {Sql : sql_table fields [] -> sql_query [] [] [T = keep] [],
      Fieldqs : $(map option fields)}
 
 fun select [keep] [drop] [keep ~ drop]
            (fl : folder keep)
            (filter : filter (keep ++ drop))
-    : query (keep ++ drop) $keep =
+    : query (keep ++ drop) keep =
     {Sql = fn tab => Sql.select tab filter.Sql,
      Fieldqs = filter.Fieldqs}
 
@@ -41,11 +41,12 @@ signature Output = sig
     val insert : $fields -> tunit
     val update : $(map option fields) -> filter fields -> tunit
     val delete : filter fields -> tunit
-    con connection :: Type -> Type
-    val connect : a ::: Type -> query fields a -> transaction (connection a)
-    val listen : a ::: Type -> transaction (connection a) -> tunit
-    val value : a ::: Type
-                -> transaction (connection a) -> LinkedList.Signal.t a
+    con connection :: {Type} -> Type
+    val connect : keep ::: {Type} ->
+                  query fields keep -> transaction (connection keep)
+    val listen : keep ::: {Type} -> connection keep -> tunit
+    val value : keep ::: {Type}
+                -> transaction (connection keep) -> LinkedList.Signal.t $keep
 end
 
 functor Make(M : Input) (* : Output *)
@@ -76,20 +77,12 @@ val injsListeners : $(map sql_injectable
     ++ @mp [sql_injectable_prim] [compose sql_injectable option]
            @@sql_option_prim fl sql_fields
 
-val connect =
- fn [a] =>
-    let
-        fun go [other ::_] [keep ::_] [other ~ keep]
-               (q : isQuery fields a other keep) =
-            ch <- channel;
-            @Sql.insert flListeners injsListeners
-                        listeners ({chan = ch} ++ q.Fieldqs);
-            rows <- queryL1 (q.Sql tab);
-            ll <- LinkedList.Source.mk (Eq.cast q.PfA [list] rows);
-            return {Channel = ch, Source = ll}
-    in
-        fn q => @@exDisj_elim [isQuery fields a] q [_] go
-    end
+fun connect [keep] (q : query fields keep) =
+    ch <- channel;
+    @Sql.insert flListeners injsListeners
+                listeners ({chan = ch} ++ q.Fieldqs);
+    ll <- LinkedList.Source.mk (fn [t] => query (q.Sql tab));
+    return {Channel = ch, Source = ll}
 
 (* fun listen [a] (cxn : connection a) = *)
 (*     let *)

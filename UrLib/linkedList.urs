@@ -12,7 +12,10 @@ end
 
 structure Source : sig
     con t :: Type -> Type
-    val mk : a ::: Type -> list a -> transaction (t a)
+    (* Argument is a fold, such as a query. *)
+    val mk : a ::: Type
+             -> (b ::: Type -> (a -> b -> transaction b) -> b -> transaction b)
+             -> transaction (t a)
     val value : a ::: Type -> t a -> Signal.t a
     val insert : a ::: Type -> a -> t a -> tunit
     val update : a ::: Type -> (a -> a) -> (a -> bool) -> t a -> tunit

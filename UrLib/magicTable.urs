@@ -1,14 +1,14 @@
 include Prelude.Types
-
+(*
 con filter :: {Type} -> Type
 val lookup : keys ::: {Type} -> others ::: {Type} -> [keys ~ others]
              => folder keys -> folder others -> $(map sql_injectable keys)
              -> $keys -> filter (keys ++ others)
 
-con query :: {Type} -> Type -> Type
+con query :: {Type} -> {Type} -> Type
 val select : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
              => folder keep
-             -> filter (keep ++ drop) -> query (keep ++ drop) $keep
+             -> filter (keep ++ drop) -> query (keep ++ drop) keep
 
 signature Types = sig
     con fields :: {Type}
@@ -37,3 +37,4 @@ end
 
 (* functor Make(M : Input) : Output *)
 (*     where con fields = M.fields *)
+*)
