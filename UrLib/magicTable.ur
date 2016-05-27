@@ -48,7 +48,7 @@ signature Output = sig
     val listen : read ::: {Type} -> Subset.t fields read
                  -> connection read -> tunit
     val value : read ::: {Type}
-                -> connection read -> LinkedList.Signal.t $read
+                -> connection read -> LinkedList.signals $read
 end
 
 functor Make(M : Input) : Output
@@ -112,13 +112,13 @@ fun delete (filter : filter fields) =
     end
 
 con connection (read :: {Type}) =
-    {Channel : channel message, Source : LinkedList.Source.t $read}
+    {Channel : channel message, Source : LinkedList.sources $read}
 
 fun connect [read] (q : query fields read) : transaction (connection read) =
     ch <- channel;
     @Sql.insert flListeners injsListeners
                 listeners ({chan = ch} ++ q.Fieldqs);
-    ll <- LinkedList.Source.mk (queryI1 (q.Sql tab));
+    ll <- LinkedList.mk (queryI1 (q.Sql tab));
     return {Channel = ch, Source = ll}
 
 fun listen [read] (sub : Subset.t fields read) (cxn : connection read) =
@@ -147,14 +147,14 @@ fun listen [read] (sub : Subset.t fields read) (cxn : connection read) =
                     (Subset.projs xqs) ys
         fun go msg =
             case msg of
-                Insert xs => LinkedList.Source.insert (Subset.projs xs) ll
+                Insert xs => LinkedList.insert (Subset.projs xs) ll
               | Update u =>
-                LinkedList.Source.update (modify u.Values) (compat u.Filter) ll
-              | Delete xqs => LinkedList.Source.delete (compat xqs) ll
+                LinkedList.update (modify u.Values) (compat u.Filter) ll
+              | Delete xqs => LinkedList.delete (compat xqs) ll
     in
         spawnListener go cxn.Channel
     end
 
-fun value [read] (cxn : connection read) = LinkedList.Source.value cxn.Source
+fun value [read] (cxn : connection read) = LinkedList.value cxn.Source
 
 end

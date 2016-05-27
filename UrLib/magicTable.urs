@@ -35,7 +35,7 @@ signature Output = sig
     val listen : read ::: {Type} -> Subset.t fields read
                  -> connection read -> tunit
     val value : read ::: {Type}
-                -> connection read -> LinkedList.Signal.t $read
+                -> connection read -> LinkedList.signals $read
 end
 
 (* functor Make(M : Input) : Output *)
