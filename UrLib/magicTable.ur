@@ -10,8 +10,7 @@ fun lookup [keys] [others] [keys ~ others]
            (ks : $keys)
     : filter (keys ++ others) =
     {Sql = @Sql.lookup ! ! flKeys injs ks,
-     Fieldqs = @map0 [_] (fn [t ::_] => None) flOthers
-               ++ @mp [ident] [option] @@Some flKeys ks}
+     Fieldqs = @injqs ! flKeys flOthers ks}
 
 con query fields keep =
     {Sql : sql_table fields [] -> sql_query [] [] [T = keep] [],
@@ -40,18 +39,20 @@ end
 signature Output = sig
     include Types
     val insert : $fields -> tunit
-    val update : $(map option fields) -> filter fields -> tunit
+    val update : write ::: {Type} -> Subset.t fields write
+                 -> $write -> filter fields -> tunit
     val delete : filter fields -> tunit
     con connection :: {Type} -> Type
-    val connect : keep ::: {Type} ->
-                  query fields keep -> transaction (connection keep)
-    val listen : keep ::: {Type} -> connection keep -> tunit
-    val value : keep ::: {Type}
-                -> transaction (connection keep) -> LinkedList.Signal.t $keep
+    val connect : read ::: {Type}
+                  -> query fields read -> transaction (connection read)
+    val listen : read ::: {Type} -> Subset.t fields read
+                 -> connection read -> tunit
+    val value : read ::: {Type}
+                -> connection read -> LinkedList.Signal.t $read
 end
 
-functor Make(M : Input) (* : Output *)
-    (* where con fields = M.fields *) = struct
+functor Make(M : Input) : Output
+    where con fields = M.fields = struct
 
 open M
 
@@ -66,52 +67,84 @@ table tab : fields
 
 table listeners : ([chan = channel message] ++ fieldqs)
 
-con connection (keep :: {Type}) =
-    {Channel : channel message, Source : LinkedList.Source.t $keep}
-
 val flListeners : folder ([chan = channel message] ++ fieldqs) =
     @Folder.cons [chan] [channel message] ! (@Folder.mp fl)
 
-val injsListeners : $(map sql_injectable
-                          ([chan = channel message] ++ fieldqs)) =
-    {chan = _}
-    ++ @mp [sql_injectable_prim] [compose sql_injectable option]
-           @@sql_option_prim fl sql_fields
+val injs = @mp [_] [_] @@sql_prim fl sql_fields
 
-fun connect [keep] (q : query fields keep) : transaction (connection keep) =
+val injsListeners
+    : $(map sql_injectable ([chan = channel message] ++ fieldqs)) =
+    {chan = _} ++ @mp [_] [compose _ _] @@sql_option_prim fl sql_fields
+
+fun insert xs =
+    let
+        val xqs = @injqs ! fl Folder.nil xs
+    in
+        @Sql.insert fl injs tab xs;
+        queryI1 (@Sql.selectCompat ! ! ! fl sql_fields _ listeners xqs)
+                (fn (row : {chan : _}) => send row.chan (Insert xs))
+    end
+
+fun update [write] (sub : Subset.t fields write)
+           (xs : $write) (filter : filter fields) =
+    Subset.elim
+        (fn [others] [write ~ others] flWrite _ (pf : Eq.t fields _) =>
+            let
+                val xqs = Subset.injqs xs
+            in
+                @Sql.update ! flWrite (Subset.projs injs)
+                            (Eq.cast pf [fn fs => sql_table fs []] tab)
+                            (Eq.cast pf [filter] filter).Sql
+                            xs;
+                queryI1 (@Sql.selectCompat ! ! ! fl sql_fields _ listeners xqs)
+                        (fn (row : {chan : _}) =>
+                            send row.chan (Update {Values = xqs,
+                                                   Filter = filter.Fieldqs}))
+            end)
+
+fun delete (filter : filter fields) =
+    let
+        val xqs = filter.Fieldqs
+    in
+        @Sql.delete tab filter.Sql;
+        queryI1 (@Sql.selectCompat ! ! ! fl sql_fields _ listeners xqs)
+                (fn (row : {chan : _}) => send row.chan (Delete xqs))
+    end
+
+con connection (read :: {Type}) =
+    {Channel : channel message, Source : LinkedList.Source.t $read}
+
+fun connect [read] (q : query fields read) : transaction (connection read) =
     ch <- channel;
     @Sql.insert flListeners injsListeners
                 listeners ({chan = ch} ++ q.Fieldqs);
     ll <- LinkedList.Source.mk (queryI1 (q.Sql tab));
     return {Channel = ch, Source = ll}
 
-fun listen [keep] (sub : Subset.t fields keep) (cxn : connection keep) =
+fun listen [read] (sub : Subset.t fields read) (cxn : connection read) =
     let
         val ll = cxn.Source
-        fun compat (xqs : $fieldqs) (ys : $keep) =
-            Subset.elim
-                (fn [drop] [keep ~ drop] flKeep _ (_ : Eq.t fields _) =>
-                    @foldR3 [eq] [option] [ident] [fn _ => bool]
-                            (fn [nm ::_] [t ::_] [rest ::_] [[nm] ~ rest]
-                                (_ : eq t) xq y acc =>
-                                case xq of
-                                    None => acc
-                                  | Some x => acc && x = y)
-                            True
-                            flKeep
-                            (Subset.projs eq_fields) (Subset.projs xqs) ys)
-        fun modify (xqs : $fieldqs) (ys : $keep) =
-            Subset.elim
-                (fn [drop] [keep ~ drop] flKeep _ (_ : Eq.t fields _) =>
-                    @foldR2 [option] [ident] [record]
-                            (fn [nm ::_] [t ::_] [rest ::_] [[nm] ~ rest]
-                                xq y acc =>
-                                case xq of
-                                    None => acc ++ {nm = y}
-                                  | Some x => acc ++ {nm = x})
-                            {}
-                            flKeep
-                            (Subset.projs xqs) ys)
+        val flRead = @Subset.fl sub
+        fun compat (xqs : $fieldqs) (ys : $read) =
+            @foldR3 [eq] [option] [ident] [fn _ => bool]
+                    (fn [nm ::_] [t ::_] [rest ::_] [[nm] ~ rest]
+                        (_ : eq t) xq y acc =>
+                        case xq of
+                            None => acc
+                          | Some x => acc && x = y)
+                    True
+                    flRead
+                    (Subset.projs eq_fields) (Subset.projs xqs) ys
+        fun modify (xqs : $fieldqs) (ys : $read) =
+            @foldR2 [option] [ident] [record]
+                    (fn [nm ::_] [t ::_] [rest ::_] [[nm] ~ rest]
+                        xq y acc =>
+                        case xq of
+                            None => acc ++ {nm = y}
+                          | Some x => acc ++ {nm = x})
+                    {}
+                    flRead
+                    (Subset.projs xqs) ys
         fun go msg =
             case msg of
                 Insert xs => LinkedList.Source.insert (Subset.projs xs) ll
@@ -122,6 +155,6 @@ fun listen [keep] (sub : Subset.t fields keep) (cxn : connection keep) =
         spawnListener go cxn.Channel
     end
 
-fun value [keep] (cxn : connection keep) = LinkedList.Source.value cxn.Source
+fun value [read] (cxn : connection read) = LinkedList.Source.value cxn.Source
 
 end

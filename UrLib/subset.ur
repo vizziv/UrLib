@@ -21,5 +21,16 @@ fun mp [fields] [keep] [f] (t : t fields keep)
 
 fun elim [fields] [keep] t = @@t
 
+fun fl [fields] [keep] (t : t fields keep) =
+    t (fn [drop] [keep ~ drop] flKeep _ _ => flKeep)
+
 fun projs [fields] [keep] (t : t fields keep) =
-    t (fn [drop] [keep ~ drop] _ _ pf xs => Eq.cast pf [record] xs --- drop)
+    t (fn [drop] [keep ~ drop] _ _ pf (xs : $fields) =>
+          Eq.cast pf [record] xs --- drop)
+
+fun injqs [fields] [keep] (t : t fields keep) =
+    t (fn [drop] [keep ~ drop]
+          flKeep flDrop (pf : Eq.t fields (keep ++ drop))
+          (xs : $keep) =>
+          Eq.cast (Eq.symm pf) [compose record (map _)]
+                  (@Prelude.injqs ! flKeep flDrop xs))

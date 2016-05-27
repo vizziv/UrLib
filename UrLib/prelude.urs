@@ -63,6 +63,10 @@ val snoc : ts ::: {Type} -> $ts
            -> nm :: Name -> t ::: Type -> [[nm] ~ ts]
            => t -> $([nm = t] ++ ts)
 
+val injqs : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
+            => folder keep -> folder drop
+            -> $keep -> $(map option (keep ++ drop))
+
 val spawnListener : t ::: Type -> (t -> tunit) -> channel t -> tunit
 
 val xempty : ctx ::: {Unit} -> xml ctx [] []

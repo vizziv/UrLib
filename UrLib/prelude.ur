@@ -48,6 +48,12 @@ fun curry [have] [need] [t] [have ~ need]
 
 fun snoc [ts] (xs : $ts) [nm :: Name] [t] [[nm] ~ ts] (x : t) = xs ++ {nm = x}
 
+fun injqs [keep] [drop] [keep ~ drop]
+          (flKeep : folder keep) (flDrop : folder drop)
+          (xs : $keep) =
+    @mp [ident] [option] @@Some flKeep xs
+    ++ @map0 [option] (fn [t ::_] => None) flDrop
+
 fun spawnListener [t] (action : t -> tunit) (chan : channel t) =
     let
         fun loop () = x <- recv chan; action x; loop ()

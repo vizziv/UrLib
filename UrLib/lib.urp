@@ -6,11 +6,11 @@ prelude
 subset
 misc
 sql
+linkedList
+magicTable
 ui
 buffer
 broadcast
 stateMachine
 userRequest
 userRequestStateMachine
-linkedList
-magicTable

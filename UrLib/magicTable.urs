@@ -1,5 +1,5 @@
 include Prelude.Types
-(*
+
 con filter :: {Type} -> Type
 val lookup : keys ::: {Type} -> others ::: {Type} -> [keys ~ others]
              => folder keys -> folder others -> $(map sql_injectable keys)
@@ -26,15 +26,17 @@ end
 signature Output = sig
     include Types
     val insert : $fields -> tunit
-    val update : $(map option fields) -> filter fields -> tunit
+    val update : write ::: {Type} -> Subset.t fields write
+                 -> $write -> filter fields -> tunit
     val delete : filter fields -> tunit
-    con connection :: Type -> Type
-    val connect : a ::: Type -> query fields a -> transaction (connection a)
-    val listen : a ::: Type -> transaction (connection a) -> tunit
-    val value : a ::: Type
-                -> transaction (connection a) -> LinkedList.Signal.t a
+    con connection :: {Type} -> Type
+    val connect : read ::: {Type}
+                  -> query fields read -> transaction (connection read)
+    val listen : read ::: {Type} -> Subset.t fields read
+                 -> connection read -> tunit
+    val value : read ::: {Type}
+                -> connection read -> LinkedList.Signal.t $read
 end
 
 (* functor Make(M : Input) : Output *)
 (*     where con fields = M.fields *)
-*)
