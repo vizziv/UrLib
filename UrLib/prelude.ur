@@ -61,11 +61,13 @@ fun spawnListener [t] (action : t -> tunit) (chan : channel t) =
         spawn (loop ())
     end
 
-val xempty = fn [ctx] => <xml></xml>
+val xempty = fn [ctx] => <xml></xml> : xml ctx [] []
 
 fun xdyn [ctx] [[Dyn] ~ ctx] sgl = <xml><dyn signal={sgl}/></xml>
 
 fun xactive code = <xml><active code={code}/></xml>
+
+fun xaction code = xactive (code; return xempty)
 
 fun mapiPartial [a] [b] (f : int -> a -> option b) =
     let

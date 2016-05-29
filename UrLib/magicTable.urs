@@ -38,5 +38,5 @@ signature Output = sig
                 -> connection read -> LinkedList.signals $read
 end
 
-(* functor Make(M : Input) : Output *)
-(*     where con fields = M.fields *)
+functor Make(M : Input) : Output
+    where con fields = M.fields

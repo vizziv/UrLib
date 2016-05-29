@@ -59,19 +59,18 @@ con sources a =
     {First : source (llSources a),
      Last : source (source (llSources a))}
 
-fun mk [a] (exec : (a -> tunit) -> tunit)
+fun mk [a] (fold : b ::: Type
+                   -> (a -> b -> transaction b) -> b -> transaction b)
     : transaction (sources a) =
     first <- source SrcNil;
-    last <- source first;
     let
-        fun go (x : a) =
+        fun go (x : a) last =
             carq <- source (Some x);
             nil <- source SrcNil;
-            cons <- get last;
-            set cons (SrcCons {Carq = carq, Cdr = nil});
-            set last nil
+            set last (SrcCons {Carq = carq, Cdr = nil});
+            return nil
     in
-        exec go;
+        last <- bind (fold go first) source;
         return {First = first, Last = last}
     end
 

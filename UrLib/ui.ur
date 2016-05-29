@@ -3,7 +3,8 @@ open Prelude
 fun withSources [ts] (fl : folder ts)
                 (inits : $ts)
                 (sgl : {Get : $(map signal ts),
-                        Set : $(map (fn t => t -> tunit) ts)}
+                        Set : $(map (fn t => t -> tunit) ts),
+                        Source : $(map source ts)}
                        -> signal xbody)
     : xbody =
     let
@@ -15,7 +16,9 @@ fun withSources [ts] (fl : folder ts)
         val sets = @mp [source] [fn t => t -> tunit] @@set fl
     in
         xactive (srcs <- mkSrcs;
-                 return (xdyn (sgl {Get = gets srcs, Set = sets srcs})))
+                 return (xdyn (sgl {Get = gets srcs,
+                                    Set = sets srcs,
+                                    Source = srcs})))
     end
 
 fun submitButtons [r] (fl : folder r) rows =

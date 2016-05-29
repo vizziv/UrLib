@@ -118,7 +118,7 @@ fun connect [read] (q : query fields read) : transaction (connection read) =
     ch <- channel;
     @Sql.insert flListeners injsListeners
                 listeners ({chan = ch} ++ q.Fieldqs);
-    ll <- LinkedList.mk (queryI1 (q.Sql tab));
+    ll <- LinkedList.mk (fn [t] => query1 (q.Sql tab));
     return {Channel = ch, Source = ll}
 
 fun listen [read] (sub : Subset.t fields read) (cxn : connection read) =

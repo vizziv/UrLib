@@ -76,6 +76,8 @@ val xdyn : ctx ::: {Unit} -> [[Dyn] ~ ctx]
 
 val xactive : transaction xbody -> xbody
 
+val xaction : tunit -> xbody
+
 val mapiPartial : a ::: Type -> b ::: Type
                   -> (int -> a -> option b) -> list a -> list b
 

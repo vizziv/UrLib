@@ -9,8 +9,13 @@ val mapX : a ::: Type -> ctx ::: {Unit} -> [[Dyn] ~ ctx]
            -> signals a -> xml ([Dyn] ++ ctx) [] []
 
 con sources :: Type -> Type
-(* Argument should call the [a -> tunit] for each [a] to put in the list. *)
-val mk : a ::: Type -> ((a -> tunit) -> tunit) -> transaction (sources a)
+(* Argument should call the [a -> b -> transaction b] for each [a] to put in
+   the list. *)
+val mk : a ::: Type
+         -> (b ::: Type
+             -> (a -> b -> transaction b)
+             -> b -> transaction b)
+         -> transaction (sources a)
 val value : a ::: Type -> sources a -> signals a
 val insert : a ::: Type -> a -> sources a -> tunit
 val update : a ::: Type -> (a -> a) -> (a -> bool) -> sources a -> tunit
