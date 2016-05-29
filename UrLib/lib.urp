@@ -3,6 +3,7 @@ $/option
 $/monad
 eq
 prelude
+record
 subset
 misc
 sql

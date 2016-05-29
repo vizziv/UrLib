@@ -34,6 +34,9 @@ signature Input = sig
     val fl : folder fields
     val eq_fields : $(map eq fields)
     val sql_fields : $(map sql_injectable_prim fields)
+    (* For debugging. *)
+    val show_fields : $(map show fields)
+    val labels_fields : $(map (fn _ => string) fields)
 end
 
 signature Output = sig
@@ -82,7 +85,9 @@ fun insert xs =
     in
         @Sql.insert fl injs tab xs;
         queryI1 (@Sql.selectCompat ! ! ! fl sql_fields _ listeners xqs)
-                (fn (row : {chan : _}) => send row.chan (Insert xs))
+                (fn (row : {chan : _}) =>
+                    debug "sending insert";
+                    send row.chan (Insert xs))
     end
 
 fun update [write] (sub : Subset.t fields write)
@@ -98,6 +103,7 @@ fun update [write] (sub : Subset.t fields write)
                             xs;
                 queryI1 (@Sql.selectCompat ! ! ! fl sql_fields _ listeners xqs)
                         (fn (row : {chan : _}) =>
+                            debug "sending update";
                             send row.chan (Update {Values = xqs,
                                                    Filter = filter.Fieldqs}))
             end)
@@ -108,7 +114,9 @@ fun delete (filter : filter fields) =
     in
         @Sql.delete tab filter.Sql;
         queryI1 (@Sql.selectCompat ! ! ! fl sql_fields _ listeners xqs)
-                (fn (row : {chan : _}) => send row.chan (Delete xqs))
+                (fn (row : {chan : _}) =>
+                    debug "sending delete";
+                    send row.chan (Delete xqs))
     end
 
 con connection (read :: {Type}) =
@@ -151,8 +159,14 @@ fun listen [read] (sub : Subset.t fields read) (cxn : connection read) =
               | Update u =>
                 LinkedList.update (modify u.Values) (compat u.Filter) ll
               | Delete xqs => LinkedList.delete (compat xqs) ll
+        val debugPrint =
+            @LinkedList.debugShow
+                 (@Record.mkShow flRead
+                                 (Subset.projs show_fields)
+                                 (Subset.projs labels_fields))
+                 cxn.Source
     in
-        spawnListener go cxn.Channel
+        spawnListener (fn msg => go msg; debugPrint) cxn.Channel
     end
 
 fun value [read] (cxn : connection read) = LinkedList.value cxn.Source

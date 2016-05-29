@@ -21,6 +21,9 @@ signature Input = sig
     val fl : folder fields
     val eq_fields : $(map eq fields)
     val sql_fields : $(map sql_injectable_prim fields)
+    (* For debugging. *)
+    val show_fields : $(map show fields)
+    val labels_fields : $(map (fn _ => string) fields)
 end
 
 signature Output = sig

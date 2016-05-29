@@ -20,3 +20,4 @@ val value : a ::: Type -> sources a -> signals a
 val insert : a ::: Type -> a -> sources a -> tunit
 val update : a ::: Type -> (a -> a) -> (a -> bool) -> sources a -> tunit
 val delete : a ::: Type -> (a -> bool) -> sources a -> tunit
+val debugShow : a ::: Type -> show a -> sources a -> tunit

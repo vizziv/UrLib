@@ -56,7 +56,7 @@ fun ureq () : transaction page =
 
 structure Mt = MagicTable.Make(struct
     con chan = #Channel
-    con fields = [X = string, Y = int, Z = bool]
+    val labels_fields = {X = "X", Y = "Y", Z = "Z"}
 end)
 
 fun mt () : transaction page =
@@ -78,7 +78,7 @@ fun mt () : transaction page =
                                                Z = get z};
                             rpc (Mt.insert xyz)}/>
         <hr/>
-        {LinkedList.mapX (fn {X = n} => <xml>X = {[n]}</xml>) (Mt.value cxn)}
+        {LinkedList.mapX (fn {X = n} => <xml>X = {[n]}<br/></xml>) (Mt.value cxn)}
       </body>
     </xml>
 

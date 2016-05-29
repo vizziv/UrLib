@@ -48,7 +48,9 @@ fun mapX [a] [ctx] [[Dyn] ~ ctx] (f : a -> xml ([Dyn] ++ ctx) [] []) =
               </xml>
               and goSgl sgl = xdyn (Monad.mp goLl sgl)
     in
-        goSgl
+        (* The extra [xdyn] layer forces evaluation of the linked list on the
+           client side, which is necessary for code generation. *)
+        compose xdyn (compose return goSgl)
     end
 
 datatype llSources a =
@@ -89,9 +91,10 @@ fun value [a] (srcs : sources a) : signals a =
 fun insert [a] (x : a) (srcs : sources a) =
     (* Last should always point to SrcNil, but in case it somehow points to a
        SrcCons, this inserts in the middle rather than dropping the end. *)
-    cdr <- bind (bind (get srcs.Last) get) source;
+    lastOld <- get srcs.Last;
+    lastNew <- bind (get lastOld) source;
     carq <- source (Some x);
-    lastNew <- source (SrcCons {Carq = carq, Cdr = cdr});
+    set lastOld (SrcCons {Carq = carq, Cdr = lastNew});
     set srcs.Last lastNew
 
 fun iterPred [a] (f : source (option a) -> tunit) (p : a -> bool)
@@ -119,3 +122,20 @@ fun update [a] (f : a -> a) =
     iterPred (fn src => bind (get src) (compose (set src) (Option.mp f)))
 
 val delete = fn [a] => iterPred (fn src => set src None)
+
+fun debugShow [a] (_ : show a) (srcs : sources a) =
+    let
+        fun goLl ll =
+            case ll of
+                SrcNil => return ""
+              | SrcCons cons =>
+                carq <- get cons.Carq;
+                acc <- goSrc cons.Cdr;
+                return ((case carq of
+                             None => "  ~"
+                           | Some car => "  [" ^ show car ^ "]")
+                        ^ acc)
+        and goSrc src = bind (get src) goLl
+    in
+        bind (goSrc srcs.First) debug
+    end
