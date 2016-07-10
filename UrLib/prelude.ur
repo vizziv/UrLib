@@ -110,12 +110,12 @@ fun mapNm0 [K] [tf :: {K} -> K -> Type]
     (@fold [fn done :: {K} =>
                todo :: {K} -> [done ~ todo] => folder todo
                -> Eq.t (done ++ todo) r
-               -> {FlDone : folder done,
+               -> {Fl_done : folder done,
                    MapF : $(map (tf (done ++ todo)) done)}]
            (fn [nm :: Name] [t :: K] [done :: {K}] [[nm] ~ done]
                (acc : todo :: {K} -> [done ~ todo] => folder todo
                       -> Eq.t (done ++ todo) r
-                      -> {FlDone : folder done,
+                      -> {Fl_done : folder done,
                           MapF : $(map (tf (done ++ todo)) done)})
                [todo :: {K}] [done ++ [nm = t] ~ todo] (fl_todo : folder todo)
                (pf : Eq.t (done ++ [nm = t] ++ todo) r) =>
@@ -124,14 +124,14 @@ fun mapNm0 [K] [tf :: {K} -> K -> Type]
                                   (@Folder.cons [nm] [t] ! fl_todo)
                                   pf
                in
-                   {FlDone = @Folder.cons [nm] [t] ! acc.FlDone,
+                   {Fl_done = @Folder.cons [nm] [t] ! acc.Fl_done,
                     MapF = acc.MapF
                         ++ {nm = @f [done ++ todo] [nm] !
-                                    (@Folder.concat ! acc.FlDone fl_todo)
+                                    (@Folder.concat ! acc.Fl_done fl_todo)
                                     pf}}
                end)
            (fn [todo :: {K}] [[] ~ todo] (_ : folder todo) _ =>
-               {FlDone = Folder.nil, MapF = {}})
+               {Fl_done = Folder.nil, MapF = {}})
            fl [[]] ! Folder.nil Eq.refl).MapF
 
 fun mapNm [K] [tf1 :: K -> Type] [tf2 :: {K} -> K -> Type]
@@ -144,12 +144,12 @@ fun mapNm [K] [tf1 :: K -> Type] [tf2 :: {K} -> K -> Type]
     (@fold [fn done :: {K} =>
                todo :: {K} -> [done ~ todo] => folder todo
                -> Eq.t (done ++ todo) r
-               -> {FlDone : folder done,
+               -> {Fl_done : folder done,
                    MapF : $(map tf1 done) -> $(map (tf2 (done ++ todo)) done)}]
            (fn [nm :: Name] [t :: K] [done :: {K}] [[nm] ~ done]
                (acc : todo :: {K} -> [done ~ todo] => folder todo
                       -> Eq.t (done ++ todo) r
-                      -> {FlDone : folder done,
+                      -> {Fl_done : folder done,
                           MapF : $(map tf1 done)
                                  -> $(map (tf2 (done ++ todo)) done)})
                [todo :: {K}] [done ++ [nm = t] ~ todo] (fl_todo : folder todo)
@@ -160,14 +160,14 @@ fun mapNm [K] [tf1 :: K -> Type] [tf2 :: {K} -> K -> Type]
                             (@Folder.cons [nm] [t] ! fl_todo)
                             pf
                in
-                   {FlDone = @Folder.cons [nm] [t] ! acc.FlDone,
+                   {Fl_done = @Folder.cons [nm] [t] ! acc.Fl_done,
                     MapF = fn (x : $(map tf1 (done ++ [nm = t]))) =>
                               acc.MapF (x -- nm)
                               ++ {nm = @f [done ++ todo] [nm] !
-                                          (@Folder.concat ! acc.FlDone fl_todo)
+                                          (@Folder.concat ! acc.Fl_done fl_todo)
                                           pf x.nm}}
                end)
-           (fn [todo :: {K}] [[] ~ todo] _ _ => {FlDone = Folder.nil, MapF = fn {} => {}})
+           (fn [todo :: {K}] [[] ~ todo] _ _ => {Fl_done = Folder.nil, MapF = fn {} => {}})
            fl [[]] ! Folder.nil Eq.refl).MapF
 
 fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
