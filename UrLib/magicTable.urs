@@ -18,12 +18,12 @@ signature Input = sig
     include Types
     con chan :: Name
     constraint [chan] ~ fields
-    val fl : folder fields
+    val fl_fields : folder fields
     val eq_fields : $(map eq fields)
-    val sql_fields : $(map sql_injectable_prim fields)
+    val sqlp_fields : $(map sql_injectable_prim fields)
     (* For debugging. *)
     val show_fields : $(map show fields)
-    val labels_fields : $(map (fn _ => string) fields)
+    val label_fields : $(map (fn _ => string) fields)
 end
 
 signature Output = sig
@@ -35,10 +35,12 @@ signature Output = sig
     con connection :: {Type} -> Type
     val connect : read ::: {Type}
                   -> query fields read -> transaction (connection read)
-    val listen : read ::: {Type} -> Subset.t fields read
+    val listen : read ::: {Type}
                  -> connection read -> tunit
-    val value : read ::: {Type}
+    val value : read ::: {Type} -> Subset.t fields read
                 -> connection read -> LinkedList.signals $read
+    (* For debugging. *)
+    table tab : fields
 end
 
 functor Make(M : Input) : Output

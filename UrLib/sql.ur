@@ -32,9 +32,9 @@ fun select [vals ::: {Type}] [others ::: {Type}] [vals ~ others]
                 {Distinct = False,
                  From = sql_from_table [#T] tab,
                  Where = cond,
-                 GroupBy = sql_subset [[T = (vals, others)]],
+                 GroupBy = sql_subset_all [[T = vals ++ others]],
                  Having = sql_inject True,
-                 SelectFields = sql_subset_all [[T = vals]],
+                 SelectFields = sql_subset [[T = (vals, others)]],
                  SelectExps = {}}
     in
         sql_query

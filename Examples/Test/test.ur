@@ -28,20 +28,18 @@ fun ureq () : transaction page =
             case srvq of
                 None => <xml>Nothing to do.</xml>
               | Some srv =>
-                cases {A = fn sr =>
-                              <xml>
-                                A {[sr.Request]}:
-                                {Ui.submitButton
-                                     {Value = "Click me!",
-                                      Onclick = sr.Submit (sr.Request + 5)}}
-                              </xml>,
-                       B = fn sr =>
-                              <xml>
-                                B {[sr.Request]}:
-                                {Ui.submitButton
-                                     {Value = "Click me!",
-                                      Onclick = sr.Submit (sr.Request - 3)}}
-                              </xml>}
+                cases {A = fn sr => <xml>
+                         A {[sr.Request]}:
+                         {Ui.submitButton
+                              {Value = "Click me!",
+                               Onclick = sr.Submit (sr.Request + 5)}}
+                       </xml>,
+                       B = fn sr => <xml>
+                         B {[sr.Request]}:
+                         {Ui.submitButton
+                              {Value = "Click me!",
+                               Onclick = sr.Submit (sr.Request - 3)}}
+                       </xml>}
                       srv
     in
         return <xml>
@@ -59,6 +57,10 @@ structure Mt = MagicTable.Make(struct
     val labels_fields = {X = "X", Y = "Y", Z = "Z"}
 end)
 
+fun noneify [a] b (v : a) : option a = if b then Some v else None
+
+fun deleteYz yz = Mt.delete (MagicTable.lookup yz)
+
 fun mt () : transaction page =
     cxn <- Mt.connect (MagicTable.select (MagicTable.lookup {Z = True}));
     x <- source "";
@@ -66,19 +68,26 @@ fun mt () : transaction page =
     z <- source False;
     return <xml>
       <body>
-        {xaction (@Mt.listen Subset.intro cxn)}
+        {xaction (@Mt.listen cxn)}
         <h1>MagicTable Test</h1>
-        <ctextbox source={x}/>
-        <cnumber source={y}/>
-        <ccheckbox source={z}/>
-        <button value="hey"
+        <ctextbox source={x}/><br/>
+        <cnumber source={y}/><br/>
+        <ccheckbox source={z}/><br/>
+        <button value="insert"
                 onclick={fn _ =>
                             xyz <- Monad.exec {X = get x,
                                                Y = Monad.mp round (get y),
                                                Z = get z};
                             rpc (Mt.insert xyz)}/>
+        <button value="delete"
+                onclick={fn _ =>
+                            yz <- Monad.exec {Y = Monad.mp round (get y),
+                                              Z = get z};
+                            rpc (deleteYz yz)}/>
         <hr/>
-        {LinkedList.mapX (fn {X = n} => <xml>X = {[n]}<br/></xml>) (Mt.value cxn)}
+        {LinkedList.mapX (fn {X = x} =>
+                             <xml>X = {[x]}<br/></xml>)
+                         (@Mt.value Subset.intro cxn)}
       </body>
     </xml>
 
