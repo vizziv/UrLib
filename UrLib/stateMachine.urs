@@ -12,7 +12,7 @@ end
 
 signature Input = sig
     include Types
-    val fl : folder states
+    val fl_states : folder states
     val sql_label : sql_injectable_prim label
     val sm : label -> t states
 end

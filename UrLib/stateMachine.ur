@@ -14,7 +14,7 @@ end
 
 signature Input = sig
     include Types
-    val fl : folder states
+    val fl_states : folder states
     val sql_label : sql_injectable_prim label
     val sm : label -> t states
 end
@@ -39,18 +39,18 @@ table sms : {Label : label, State : serialized state} PRIMARY KEY Label
 fun next label (x : state) (y : effect) =
     statevq
     <- @casesDiagTraverse [fst] [snd] [fn _ => _]
-                          fl transaction_monad
+                          fl_states transaction_monad
                           (@mp [fn s => {State : s.1, Effect : s.2}
                                         -> transaction state]
                                [fn s => s.1 -> s.2 -> transaction state]
                                (fn [s] f state effect =>
                                    f {State = state, Effect = effect})
-                               fl
+                               fl_states
                                (sm label))
                           x y;
     case statevq of
         None => return None
-      | Some statev => return (Some (@casesGet fl statev))
+      | Some statev => return (Some (@casesGet fl_states statev))
 
 fun init {Label = label, State = state} =
     Sql.insert sms {Label = label, State = serialize state};

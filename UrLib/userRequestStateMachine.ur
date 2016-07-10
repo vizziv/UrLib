@@ -19,9 +19,9 @@ end
 
 signature Input = sig
     include Types
-    val fl : folder handlerStates
-    val sql_group : sql_injectable_prim group
-    val sql_member : sql_injectable_prim member
+    val fl_handlerStates : folder handlerStates
+    val sqlp_group : sql_injectable_prim group
+    val sqlp_member : sql_injectable_prim member
     val eq_member : eq member
     val sm : group -> StateMachine.t states
     val request : group -> requestTranslations
@@ -51,7 +51,7 @@ open M
 
 structure Sm = StateMachine.Make(struct
     con states = M.states
-    val fl = @Folder.mp fl
+    val fl_states = @Folder.mp fl_handlerStates
     val sm = sm
 end)
 
@@ -59,16 +59,17 @@ end)
 type inference. *)
 
 val translateRequest =
-    compose (@casesTraverse [fn _ => _] [fn _ => _] fl _) request
+    compose (@casesTraverse [fn _ => _] [fn _ => _] fl_handlerStates _) request
 
 val translateResponse =
-    compose (@casesTraverse [fn _ => _] [fn _ => _] fl _) response
+    compose (@casesTraverse [fn _ => _] [fn _ => _] fl_handlerStates _) response
 
 con responses (hs :: {(Type * Type * Type * Type)}) =
     variant (map (fn h => list {Member : member, Response : h.2}) hs)
 
 fun cont (group : group) (ask : _ -> tunit) =
-    @mapNm0 [fn hs h => list {Member : member, Response : h.2} -> tunit] fl
+    @mapNm0 [fn hs h => list {Member : member, Response : h.2} -> tunit]
+            fl_handlerStates
             (fn [others ::_] [nm ::_] [h] [[nm] ~ others] _
                 (pf : Eq.t _ _) resps =>
                 resp <- translateResponse group (Eq.cast pf [responses]
@@ -80,7 +81,7 @@ fun cont (group : group) (ask : _ -> tunit) =
 
 open UserRequest.Make(struct
     con handlers = M.handlers
-    val fl = @Folder.mp fl
+    val fl_handlers = @Folder.mp fl_handlerStates
     type group = M.group
     type member = M.member
     val cont = cont

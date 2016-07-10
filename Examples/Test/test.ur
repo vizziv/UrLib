@@ -54,7 +54,7 @@ fun ureq () : transaction page =
 
 structure Mt = MagicTable.Make(struct
     con chan = #Channel
-    val labels_fields = {X = "X", Y = "Y", Z = "Z"}
+    val label_fields = {X = "X", Y = "Y", Z = "Z"}
 end)
 
 fun noneify [a] b (v : a) : option a = if b then Some v else None

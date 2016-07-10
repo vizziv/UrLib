@@ -49,10 +49,10 @@ fun curry [have] [need] [t] [have ~ need]
 fun snoc [ts] (xs : $ts) [nm :: Name] [t] [[nm] ~ ts] (x : t) = xs ++ {nm = x}
 
 fun injqs [keep] [drop] [keep ~ drop]
-          (flKeep : folder keep) (flDrop : folder drop)
+          (fl_keep : folder keep) (fl_drop : folder drop)
           (xs : $keep) =
-    @mp [ident] [option] @@Some flKeep xs
-    ++ @map0 [option] (fn [t ::_] => None) flDrop
+    @mp [ident] [option] @@Some fl_keep xs
+    ++ @map0 [option] (fn [t ::_] => None) fl_drop
 
 fun spawnListener [t] (action : t -> tunit) (chan : channel t) =
     let
@@ -117,17 +117,17 @@ fun mapNm0 [K] [tf :: {K} -> K -> Type]
                       -> Eq.t (done ++ todo) r
                       -> {FlDone : folder done,
                           MapF : $(map (tf (done ++ todo)) done)})
-               [todo :: {K}] [done ++ [nm = t] ~ todo] (flTodo : folder todo)
+               [todo :: {K}] [done ++ [nm = t] ~ todo] (fl_todo : folder todo)
                (pf : Eq.t (done ++ [nm = t] ++ todo) r) =>
                let
                    val acc = @acc [[nm = t] ++ todo] !
-                                  (@Folder.cons [nm] [t] ! flTodo)
+                                  (@Folder.cons [nm] [t] ! fl_todo)
                                   pf
                in
                    {FlDone = @Folder.cons [nm] [t] ! acc.FlDone,
                     MapF = acc.MapF
                         ++ {nm = @f [done ++ todo] [nm] !
-                                    (@Folder.concat ! acc.FlDone flTodo)
+                                    (@Folder.concat ! acc.FlDone fl_todo)
                                     pf}}
                end)
            (fn [todo :: {K}] [[] ~ todo] (_ : folder todo) _ =>

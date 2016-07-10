@@ -8,8 +8,8 @@ end
 
 signature Input = sig
     include Types
-    val sql_group : sql_injectable_prim group
-    val sql_member : sql_injectable_prim member
+    val sqlp_group : sql_injectable_prim group
+    val sqlp_member : sql_injectable_prim member
 end
 
 signature Output = sig

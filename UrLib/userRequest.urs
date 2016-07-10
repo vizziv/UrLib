@@ -10,9 +10,9 @@ end
 
 signature Input = sig
     include Types
-    val fl : folder handlers
-    val sql_group : sql_injectable_prim group
-    val sql_member : sql_injectable_prim member
+    val fl_handlers : folder handlers
+    val sqlp_group : sql_injectable_prim group
+    val sqlp_member : sql_injectable_prim member
     val eq_member : eq member
     val cont : group
                -> (requests -> tunit)

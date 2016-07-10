@@ -18,9 +18,9 @@ end
 
 signature Input = sig
     include Types
-    val fl : folder handlers
-    val sql_group : sql_injectable_prim group
-    val sql_member : sql_injectable_prim member
+    val fl_handlers : folder handlers
+    val sqlp_group : sql_injectable_prim group
+    val sqlp_member : sql_injectable_prim member
     val eq_member : eq member
     val cont : group
                -> (requests -> tunit)
@@ -89,13 +89,13 @@ fun connect user : transaction connection =
     end
 
 fun instantiate [tf] job variant =
-    {Instance = Some (serialize (@casesMapU [tf] [fn _ => int] fl
+    {Instance = Some (serialize (@casesMapU [tf] [fn _ => int] fl_handlers
                                             (fn [t] _ => job) variant))}
 
 fun ask group (requests : requests) =
     let
         val reqs =
-            @casesFunctor (@Folder.mp fl)
+            @casesFunctor (@Folder.mp fl_handlers)
                           (@Functor.compose Functor.list
                                             (Functor.field [#Request]))
                           requests
@@ -137,13 +137,14 @@ fun handle user job resp =
                                         else
                                             respzq);
                               acc <- accq;
-                              (@casesDiagU [snd] [respList] [respList] fl
+                              (@casesDiagU [snd] [respList] [respList]
+                                           fl_handlers
                                            (fn [t] resp acc =>
                                                ({Member = member,
                                                  Response = resp})
                                                :: acc)
                                            (deserialize respz) acc))
-                          (Some (@casesMapU [snd] [respList] fl
+                          (Some (@casesMapU [snd] [respList] fl_handlers
                                             (fn [t] _ => [])
                                             resp));
         case respsq of
@@ -168,7 +169,7 @@ fun subscribeListeners connection listeners =
         fun ls job =
             @mapNm [fn h => (h.2 -> tunit) -> h.1 -> tunit]
                    [fn hs h => h.1 -> tunit]
-                   fl
+                   fl_handlers
                    (fn [others ::_] [nm ::_] [h]
                        [[nm] ~ others] _ (pf : Eq.t _ _)
                        l0 =>
@@ -207,7 +208,7 @@ fun listen (connection : connection) =
                                           Request = req})))
             end
         val listeners =
-            @mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] fl f
+            @mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] fl_handlers f
     in
         subscribeListeners connection listeners
     end
