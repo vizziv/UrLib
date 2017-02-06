@@ -1,5 +1,9 @@
 open Prelude
 
+structure Speed = Enum.Make(struct
+    val label = {Hyper = "Hyper", Ludicrous = "Ludicrous", Plaid = "Plaid"}
+end)
+
 structure Ureq = UserRequest.Make(struct
     con handlers = [A = (int, int), B = (int, int)]
     type group = int
@@ -75,7 +79,9 @@ fun mt () : transaction page =
         <ccheckbox source={z}/><br/>
         <button value="insert"
                 onclick={fn _ =>
-                            xyz <- Monad.exec {X = get x,
+                            xyz <- Monad.exec {X = Monad.mp
+                                                       (@readError Speed.read)
+                                                       (get x),
                                                Y = Monad.mp round (get y),
                                                Z = get z};
                             rpc (Mt.insert xyz)}/>

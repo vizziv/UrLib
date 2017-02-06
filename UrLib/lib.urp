@@ -3,6 +3,7 @@ $/option
 $/monad
 eq
 prelude
+enum
 record
 subset
 misc

@@ -37,7 +37,7 @@ structure Functor : sig
                   -> t f -> t g -> t (compose f g)
 end
 
-val identity_monad : monad (fn t => t)
+val monad_ident : monad (fn t => t)
 
 val bit : bool -> int
 

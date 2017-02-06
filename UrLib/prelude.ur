@@ -24,7 +24,7 @@ fun zip [a] [b] [c] (f : a -> b -> c) (xs : list a) (ys : list b) : list c =
 fun impossible [t] loc : t =
     error <xml>The allegedly impossible has occurred at {txt loc}.</xml>
 
-val identity_monad =
+val monad_ident =
     mkMonad {Return = @@id, Bind = fn [t1] [t2] (x : t1) (f : t1 -> t2) => f x}
 
 fun bit b = if b then 1 else 0
@@ -282,7 +282,7 @@ fun casesDiag [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
     : $(map (fn t :: K => tf1 t -> tf2 t -> tf3 t) r)
       -> variant (map tf1 r) -> variant (map tf2 r)
       -> option (variant (map tf3 r)) =
-    @@casesDiagTraverse [tf1] [tf2] [tf3] [r] fl [fn t => t] identity_monad
+    @@casesDiagTraverse [tf1] [tf2] [tf3] [r] fl [fn t => t] monad_ident
 
 fun casesDiagU [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type]
                [r ::: {K}] (fl : folder r)
