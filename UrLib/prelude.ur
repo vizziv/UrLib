@@ -22,7 +22,7 @@ fun zip [a] [b] [c] (f : a -> b -> c) (xs : list a) (ys : list b) : list c =
       | (x :: xs', y :: ys') => f x y :: zip f xs' ys'
 
 fun impossible [t] loc : t =
-    error <xml>The allegedly impossible has occurred at {[loc]}.</xml>
+    error <xml>The allegedly impossible has occurred at {txt loc}.</xml>
 
 val identity_monad =
     mkMonad {Return = @@id, Bind = fn [t1] [t2] (x : t1) (f : t1 -> t2) => f x}
@@ -80,25 +80,6 @@ fun mapiPartial [a] [b] (f : int -> a -> option b) =
     in
         mp' 0 []
     end
-
-con exDisj = K ==>
- fn tf :: ({K} -> {K} -> Type) =>
-    res ::: Type
-    -> (choice1 :: {K} -> choice2 :: {K} -> [choice1 ~ choice2]
-        => tf choice1 choice2 -> res)
-    -> res
-
-fun exDisj_intro [K] [tf :: {K} -> {K} -> Type]
-                 [choice1 :: {K}] [choice2 :: {K}] [choice1 ~ choice2]
-                 (body : tf choice1 choice2) : exDisj tf =
- fn [res]
-    (f : choice1 :: {K} -> choice2 :: {K} -> [choice1 ~ choice2]
-         => tf choice1 choice2 -> res) =>
-    f [choice1] [choice2] body
-
-fun exDisj_elim [K] [tf ::: {K} -> {K} -> Type]
-                (v : exDisj tf) [res ::: Type] =
-    @@v [res]
 
 fun mapNm0 [K] [tf :: {K} -> K -> Type]
            [r ::: {K}] (fl : folder r)

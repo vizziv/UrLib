@@ -81,18 +81,6 @@ val xaction : tunit -> xbody
 val mapiPartial : a ::: Type -> b ::: Type
                   -> (int -> a -> option b) -> list a -> list b
 
-con exDisj :: K --> ({K} -> {K} -> Type) -> Type
-
-val exDisj_intro : K --> tf :: ({K} -> {K} -> Type)
-                   -> choice1 :: {K} -> choice2 :: {K} -> [choice1 ~ choice2]
-                   => tf choice1 choice2
-                   -> exDisj tf
-
-val exDisj_elim : K --> tf ::: ({K} -> {K} -> Type) -> exDisj tf -> res ::: Type
-                  -> (choice1 :: {K} -> choice2 :: {K} -> [choice1 ~ choice2]
-                      => tf choice1 choice2 -> res)
-                  -> res
-
 val mapNm0 : K --> tf :: ({K} -> K -> Type)
              -> r ::: {K} -> folder r
              -> (others :: {K} -> nm :: Name -> t ::: K
