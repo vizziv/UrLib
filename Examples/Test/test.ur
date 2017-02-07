@@ -72,7 +72,7 @@ fun mt () : transaction page =
     z <- source False;
     return <xml>
       <body>
-        {xaction (@Mt.listen cxn)}
+        {xaction (Mt.listen cxn)}
         <h1>MagicTable Test</h1>
         <ctextbox source={x}/><br/>
         <cnumber source={y}/><br/>
