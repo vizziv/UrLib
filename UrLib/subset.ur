@@ -33,4 +33,4 @@ fun injqs [fields] [keep] (t : t fields keep) =
           fl_keep fl_drop (pf : Eq.t fields (keep ++ drop))
           (xs : $keep) =>
           Eq.cast (Eq.symm pf) [compose record (map _)]
-                  (@Prelude.injqs ! fl_keep fl_drop xs))
+                  (@Record.injqs ! fl_keep fl_drop xs))

@@ -115,7 +115,7 @@ fun iterPred [a] (f : source (option a) -> tunit) (p : a -> bool)
                 goSrc cons.Cdr
         and goSrc src = bind (get src) goLl
     in
-        compose goSrc (proj [#First])
+        compose goSrc (Record.proj [#First])
     end
 
 fun update [a] (f : a -> a) =

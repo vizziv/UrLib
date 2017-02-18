@@ -6,7 +6,7 @@ prelude
 enum
 record
 subset
-misc
+str
 sql
 linkedList
 magicTable

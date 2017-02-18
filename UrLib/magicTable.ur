@@ -10,7 +10,7 @@ fun lookup [keys] [others] [keys ~ others]
            (ks : $keys)
     : filter (keys ++ others) =
     {Sql = @Sql.lookup ! ! fl_keys sql_keys ks,
-     Fieldqs = @injqs ! fl_keys fl_others ks}
+     Fieldqs = @Record.injqs ! fl_keys fl_others ks}
 
 con query fields keep =
     {Sql : sql_table fields [] -> sql_query [] [] [T = fields] [],
@@ -87,7 +87,7 @@ val sql_listeners
 
 fun insert xs =
     let
-        val xqs = @injqs ! fl_fields Folder.nil xs
+        val xqs = @Record.injqs ! fl_fields Folder.nil xs
     in
         @Sql.insert fl_fields sql_fields tab xs;
         queryI1 (@Sql.selectCompat ! ! ! fl_fields sqlp_fields _ listeners xqs)

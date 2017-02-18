@@ -6,8 +6,7 @@ signature Types = sig
     type void
 end
 
-structure T : Types
-    where type void = variant [] = struct end
+structure T : Types where type void = variant [] = struct end
 
 open T
 
@@ -32,27 +31,27 @@ fun bit b = if b then 1 else 0
 fun maximum [t] (_ : ord t) : t -> list t -> t = List.foldl max
 fun minimum [t] (_ : ord t) : t -> list t -> t = List.foldl min
 
-fun proj [nm ::_] [t] [drop] [[nm] ~ drop] (xs : $([nm = t] ++ drop)) = xs.nm
+fun mapiPartial [a] [b] (f : int -> a -> option b) =
+    let
+        fun mp' n acc ls =
+            case ls of
+                [] => List.rev acc
+              | x :: ls => mp' (n+1) (case f n x of
+                                          None => acc
+                                        | Some y => y :: acc) ls
+    in
+        mp' 0 []
+    end
 
-val proj1 = fn [nm] [t] => proj [nm]
-
-fun projs [keep] [drop] [keep ~ drop] (xs : $(keep ++ drop)) = xs --- drop
-
-fun rename [nm1 ::_] [nm2 ::_] [t] [ts] [[nm1] ~ ts] [[nm2] ~ ts]
-           (xs : $([nm1 = t] ++ ts)) =
-    xs -- nm1 ++ {nm2 = xs.nm1}
-
-fun curry [have] [need] [t] [have ~ need]
-          (f : $(have ++ need) -> t) (xs : $have) (ys : $need) =
-    f (xs ++ ys)
-
-fun snoc [ts] (xs : $ts) [nm :: Name] [t] [[nm] ~ ts] (x : t) = xs ++ {nm = x}
-
-fun injqs [keep] [drop] [keep ~ drop]
-          (fl_keep : folder keep) (fl_drop : folder drop)
-          (xs : $keep) =
-    @mp [ident] [option] @@Some fl_keep xs
-    ++ @map0 [option] (fn [t ::_] => None) fl_drop
+fun distinct [t] (_ : eq t) (_ : ord t) (xs : list t) =
+    let
+        fun check xs =
+            case xs of
+                x0 :: x1 :: xs => if x0 = x1 then False else check (x1 :: xs)
+              | _ => True
+    in
+        check (List.sort le xs)
+    end
 
 fun spawnListener [t] (action : t -> tunit) (chan : channel t) =
     let
@@ -68,18 +67,6 @@ fun xdyn [ctx] [[Dyn] ~ ctx] sgl = <xml><dyn signal={sgl}/></xml>
 fun xactive code = <xml><active code={code}/></xml>
 
 fun xaction code = xactive (code; return xempty)
-
-fun mapiPartial [a] [b] (f : int -> a -> option b) =
-    let
-        fun mp' n acc ls =
-            case ls of
-                [] => List.rev acc
-              | x :: ls => mp' (n+1) (case f n x of
-                                          None => acc
-                                        | Some y => y :: acc) ls
-    in
-        mp' 0 []
-    end
 
 fun mapNm0 [K] [tf :: {K} -> K -> Type]
            [r ::: {K}] (fl : folder r)

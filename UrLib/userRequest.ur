@@ -73,8 +73,8 @@ type connection =
       Channel : channel {Job : int, Request : request},
       Source : source _}
 
-val groupOf = proj [#Group]
-val memberOf = proj [#Member]
+val groupOf = Record.proj [#Group]
+val memberOf = Record.proj [#Member]
 
 fun connect user : transaction connection =
     chan <- channel;
@@ -85,7 +85,7 @@ fun connect user : transaction connection =
     in
         Sql.insert users row;
         src <- source None;
-        return (projs row ++ {Source = src})
+        return (Record.projs row ++ {Source = src})
     end
 
 fun instantiate [tf] job variant =
@@ -99,13 +99,13 @@ fun ask group (requests : requests) =
                           (@Functor.compose Functor.list
                                             (Functor.field [#Request]))
                           requests
-        val members = List.mp (proj [#Member]) reqs
+        val members = List.mp (Record.proj [#Member]) reqs
         val cond = (SQL T.Group = {[group]}
-                    AND {Sql.lookups (List.mp (snoc {} [#Member]) members)})
+                    AND {Sql.lookups (List.mp (Record.snoc {} [#Member]) members)})
         fun req member =
             case List.find (fn req => req.Member = member) reqs of
                 None => impossible _LOC_
-              | Some req => projs req
+              | Some req => Record.projs req
     in
         job <- nextval jobs;
         let

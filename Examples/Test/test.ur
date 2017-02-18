@@ -12,13 +12,13 @@ structure Ureq = UserRequest.Make(struct
         {A = fn foo =>
                 case foo of
                     ({Response = n, Member = m} :: []) =>
-                    debug (Misc.plural n "object");
+                    debug (Str.plural n "object");
                     ask (make [#B] ({Member = 0, Request = n} :: []))
                   | _ => return (),
          B = fn foo =>
                 case foo of
                     ({Response = n, Member = m} :: []) =>
-                    debug (Misc.plural n "thingy");
+                    debug (Str.plural n "thingy");
                     ask (make [#A] ({Member = 0, Request = n} :: []))
                   | _ => return ()}
 end)

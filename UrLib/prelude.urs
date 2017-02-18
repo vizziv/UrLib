@@ -44,28 +44,10 @@ val bit : bool -> int
 val maximum : t ::: Type -> ord t -> t -> list t -> t
 val minimum : t ::: Type -> ord t -> t -> list t -> t
 
-val proj : nm :: Name -> t ::: Type -> drop ::: {Type} -> [[nm] ~ drop]
-           => $([nm = t] ++ drop) -> t
+val mapiPartial : a ::: Type -> b ::: Type
+                  -> (int -> a -> option b) -> list a -> list b
 
-val proj1 : nm ::: Name -> t ::: Type -> {nm : t} -> t
-
-val projs : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
-            => $(keep ++ drop) -> $keep
-
-val rename : nm1 :: Name -> nm2 :: Name -> t ::: Type -> ts ::: {Type}
-             -> [[nm1] ~ ts] => [[nm2] ~ ts]
-             => $([nm1 = t] ++ ts) -> $([nm2 = t] ++ ts)
-
-val curry : have ::: {Type} -> need ::: {Type} -> t ::: Type -> [have ~ need]
-            => ($(have ++ need) -> t) -> $have -> $need -> t
-
-val snoc : ts ::: {Type} -> $ts
-           -> nm :: Name -> t ::: Type -> [[nm] ~ ts]
-           => t -> $([nm = t] ++ ts)
-
-val injqs : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
-            => folder keep -> folder drop
-            -> $keep -> $(map option (keep ++ drop))
+val distinct : t ::: Type -> eq t -> ord t -> list t -> bool
 
 val spawnListener : t ::: Type -> (t -> tunit) -> channel t -> tunit
 
@@ -77,9 +59,6 @@ val xdyn : ctx ::: {Unit} -> [[Dyn] ~ ctx]
 val xactive : transaction xbody -> xbody
 
 val xaction : tunit -> xbody
-
-val mapiPartial : a ::: Type -> b ::: Type
-                  -> (int -> a -> option b) -> list a -> list b
 
 val mapNm0 : K --> tf :: ({K} -> K -> Type)
              -> r ::: {K} -> folder r

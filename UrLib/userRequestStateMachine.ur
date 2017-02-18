@@ -88,7 +88,7 @@ open UserRequest.Make(struct
 end)
 
 fun init gs =
-    state <- Sm.init (rename [#Group] [#Label] gs);
+    state <- Sm.init (Record.rename [#Group] [#Label] gs);
     bind (translateRequest gs.Group state) (ask gs.Group)
 
 end

@@ -92,11 +92,12 @@ fun passed xs votes =
 fun verify xs =
     List.mapi (fn i action =>
                   case roleOf xs.Roles i of
-                      Resistance => projs action ++ {Response = True}
+                      Resistance => Record.projs action ++ {Response = True}
                     | Spy => action)
 
 fun succeeded xs (actions : list {Member : _, Response : _}) =
-    countFalse xs.Roles (verify xs actions) <= bit (xs.Round = 3 && xs.NumPlayers < 7)
+    countFalse xs.Roles (verify xs actions)
+    <= bit (xs.Round = 3 && xs.NumPlayers < 7)
 
 fun team xs proposals =
     case proposals of
@@ -134,7 +135,7 @@ fun sm group : StateMachine.t _ =
          else
              return (make [#Propose] ({Attempt = xs.Attempt + 1,
                                        Leader = nextLeader xs}
-                                      ++ projs xs)),
+                                      ++ Record.projs xs)),
      Mission =
       fn {State = xs, Effect = actions} =>
          let
@@ -152,7 +153,7 @@ fun sm group : StateMachine.t _ =
                                 Score = score,
                                 Attempt = 0,
                                 Leader = nextLeader xs}
-                               ++ projs xs))
+                               ++ Record.projs xs))
          end,
      Done = fn {State = xs, Effect = ()} => return (make [#Done] xs)}
 
@@ -273,14 +274,14 @@ fun start group =
 (* Front End. *)
 
 fun groupsX [ctx] [inp] (f : group -> xml ctx inp []) =
-    queryX1 (Sql.select games (SQL TRUE)) (compose f proj1)
+    queryX1 (Sql.select games (SQL TRUE)) (compose f Record.proj1)
 
-val showSpies = compose Misc.showList spies
+val showSpies = compose Str.showList spies
 
 val show_message : show message =
     let
         val showVotes =
-            compose (compose Misc.stringList (List.sort gt))
+            compose (compose Str.stringList (List.sort gt))
                     (List.mp (fn {Member = member, Response = vote} =>
                                  show member ^ ": "
                                  ^ if vote then "approve" else "reject"))
@@ -289,11 +290,11 @@ val show_message : show message =
                 Proposing player =>
                 "Player " ^ show player ^ " proposing a team."
               | Voting team =>
-                "Voting on team " ^ Misc.showList team ^ "."
+                "Voting on team " ^ Str.showList team ^ "."
               | Votes votes =>
                 "Votes: " ^ showVotes votes ^ "."
               | Acting team =>
-                "Team " ^ Misc.showList team ^ " going on mission."
+                "Team " ^ Str.showList team ^ " going on mission."
               | Actions {Successes = s, Fails = f} =>
                 "Successes: " ^ show s ^ ". Fails: " ^ show f ^ "."
               | Victory {Winner = w, Roles = rs} =>
@@ -306,7 +307,7 @@ fun formNew (infoSrc : source _) sr = <xml>
   {[case sr.Request of
         None => "You're a loyal Resistance member."
       | Some spies =>
-        "You're a Spy. The spies are " ^ Misc.showList spies ^ "."]}
+        "You're a Spy. The spies are " ^ Str.showList spies ^ "."]}
   {Ui.submitButton {Value = "Got it", Onclick = sr.Submit ()}}
   {xactive (set infoSrc sr.Request; return xempty)}
 </xml>
@@ -317,7 +318,7 @@ fun formPropose sr =
         val numPlayers = sr.Request.NumPlayers
         val sgl =
             team <- List.mapM (compose (Monad.mp round) signal) srcs;
-            if Misc.distinct team
+            if distinct team
                && minimum numPlayers team >= 0
                && maximum 0 team < numPlayers then
                 return (Ui.submitButton {Value = "Propose",
@@ -349,7 +350,7 @@ fun renderForm (infoSrc : source _) srvq =
                Propose = compose xactive formPropose,
                Vote =
                 fn sr => <xml>
-                  Proposed team is {[Misc.showList sr.Request]}.<br/>
+                  Proposed team is {[Str.showList sr.Request]}.<br/>
                   {formBool sr.Submit {True = "Approve", False = "Reject"}}
                 </xml>,
                Mission =
@@ -362,7 +363,7 @@ fun renderForm (infoSrc : source _) srvq =
 fun renderInfo info =
     case info of
         None => <xml>You don't know anything....</xml>
-      | Some spies => <xml>You know the spies are {[Misc.showList spies]}</xml>
+      | Some spies => <xml>You know the spies are {[Str.showList spies]}</xml>
 
 fun play groupq () : transaction page =
     j <- join groupq;
