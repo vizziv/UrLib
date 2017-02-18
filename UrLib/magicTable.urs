@@ -1,14 +1,39 @@
 include Prelude.Types
 
+con t :: {Type} -> Type
 con filter :: {Type} -> Type
+con query :: {Type} -> {Type} -> Type
+con connection :: {Type} -> {Type} -> Type
+
 val lookup : keys ::: {Type} -> others ::: {Type} -> [keys ~ others]
              => folder keys -> folder others -> $(map sql_injectable keys)
              -> $keys -> filter (keys ++ others)
 
-con query :: {Type} -> {Type} -> Type
 val select : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
              => folder keep
              -> filter (keep ++ drop) -> query (keep ++ drop) keep
+
+val insert : fields ::: {Type}
+             -> t fields -> $fields -> tunit
+
+val update : write ::: {Type} -> others ::: {Type} -> [write ~ others]
+             => folder write -> folder others
+             -> t (write ++ others)
+             -> $write -> filter (write ++ others) -> tunit
+
+val delete : fields ::: {Type}
+             -> t fields -> filter fields -> tunit
+
+val connect : read ::: {Type} -> others ::: {Type} -> [read ~ others]
+              => folder read -> folder others
+              -> t (read ++ others) -> query (read ++ others) read
+              -> transaction (connection (read ++ others) read)
+
+val listen : fields ::: {Type} -> read ::: {Type}
+             -> connection fields read -> tunit
+
+val value : read ::: {Type} -> others ::: {Type} -> [read ~ others]
+            => connection (read ++ others) read -> LinkedList.signals $read
 
 signature Types = sig
     con fields :: {Type}
@@ -28,17 +53,7 @@ end
 
 signature Output = sig
     include Types
-    val insert : $fields -> tunit
-    val update : write ::: {Type} -> Subset.t fields write
-                 -> $write -> filter fields -> tunit
-    val delete : filter fields -> tunit
-    con connection :: {Type} -> Type
-    val connect : read ::: {Type}
-                  -> query fields read -> transaction (connection read)
-    val listen : read ::: {Type}
-                 -> connection read -> tunit
-    val value : read ::: {Type} -> Subset.t fields read
-                -> connection read -> LinkedList.signals $read
+    val t : t fields
     (* For debugging. *)
     table tab : fields
 end

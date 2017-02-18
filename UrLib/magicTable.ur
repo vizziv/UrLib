@@ -4,6 +4,22 @@ con filter fields =
     {Sql : sql_exp [T = fields] [] [] bool,
      Fieldqs : $(map option fields)}
 
+con query fields keep =
+    {Sql : sql_table fields [] -> sql_query [] [] [T = fields] [],
+     Fieldqs : $(map option fields)}
+
+con connection fields read =
+    {Listen : tunit,
+     Value : LinkedList.signals $read}
+
+con t fields =
+    {Insert : $fields -> tunit,
+     Update : write ::: {Type} -> Subset.t fields write
+              -> $write -> filter fields -> tunit,
+     Delete : filter fields -> tunit,
+     Connect : read ::: {Type} -> Subset.t fields read
+               -> query fields read -> transaction (connection fields read)}
+
 fun lookup [keys] [others] [keys ~ others]
            (fl_keys : folder keys) (fl_others : folder others)
            (sql_keys : $(map sql_injectable keys))
@@ -12,16 +28,30 @@ fun lookup [keys] [others] [keys ~ others]
     {Sql = @Sql.lookup ! ! fl_keys sql_keys ks,
      Fieldqs = @Record.injqs ! fl_keys fl_others ks}
 
-con query fields keep =
-    {Sql : sql_table fields [] -> sql_query [] [] [T = fields] [],
-     Fieldqs : $(map option fields)}
-
 fun select [keep] [drop] [keep ~ drop]
            (fl_keep : folder keep)
            (filter : filter (keep ++ drop))
     : query (keep ++ drop) keep =
     {Sql = fn tab => Sql.select tab filter.Sql,
      Fieldqs = filter.Fieldqs}
+
+fun insert [fields] t = t.Insert
+
+fun update [write] [others] [write ~ others]
+           fl_write fl_others
+           (t : t (write ++ others)) =
+    @@t.Update [write] (@Subset.intro ! fl_write fl_others)
+
+fun delete [fields] t = t.Delete
+
+fun connect [read] [others] [read ~ others]
+            fl_read fl_others
+            (t : t (read ++ others)) (q : query (read ++ others) read) =
+    @@t.Connect [read] (@Subset.intro ! fl_read fl_others) q
+
+fun listen [fields] [read] cxn = cxn.Listen
+
+fun value [read] [others] [read ~ others] cxn = cxn.Value
 
 signature Types = sig
     con fields :: {Type}
@@ -41,17 +71,7 @@ end
 
 signature Output = sig
     include Types
-    val insert : $fields -> tunit
-    val update : write ::: {Type} -> Subset.t fields write
-                 -> $write -> filter fields -> tunit
-    val delete : filter fields -> tunit
-    con connection :: {Type} -> Type
-    val connect : read ::: {Type}
-                  -> query fields read -> transaction (connection read)
-    val listen : read ::: {Type}
-                 -> connection read -> tunit
-    val value : read ::: {Type} -> Subset.t fields read
-                -> connection read -> LinkedList.signals $read
+    val t : t fields
     (* For debugging. *)
     table tab : fields
 end
@@ -175,5 +195,15 @@ fun listen [read] (cxn : connection read) =
 
 fun value [read] (sub : Subset.t fields read) (cxn : connection read) =
     LinkedList.mp (@Subset.projs sub) (LinkedList.value cxn.Source)
+
+val t =
+    {Insert = insert,
+     Update = @@update,
+     Delete = delete,
+     Connect =
+      fn [read] sub q =>
+         cxn <- @@connect [read] q;
+         return {Listen = @@listen [read] cxn,
+                 Value = @value sub cxn}}
 
 end

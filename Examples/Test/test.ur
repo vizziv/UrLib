@@ -61,18 +61,20 @@ structure Mt = MagicTable.Make(struct
     val label_fields = {X = "X", Y = "Y", Z = "Z"}
 end)
 
+fun mtInsert x = MagicTable.insert Mt.t x
+
 fun noneify [a] b (v : a) : option a = if b then Some v else None
 
-fun deleteYz yz = Mt.delete (MagicTable.lookup yz)
+fun deleteYz yz = MagicTable.delete Mt.t (MagicTable.lookup yz)
 
 fun mt () : transaction page =
-    cxn <- Mt.connect (MagicTable.select (MagicTable.lookup {Z = True}));
+    cxn <- MagicTable.connect Mt.t (MagicTable.select (MagicTable.lookup {Z = True}));
     x <- source "";
     y <- source 0.0;
     z <- source False;
     return <xml>
       <body>
-        {xaction (Mt.listen cxn)}
+        {xaction (MagicTable.listen cxn)}
         <h1>MagicTable Test</h1>
         <ctextbox source={x}/><br/>
         <cnumber source={y}/><br/>
@@ -84,7 +86,7 @@ fun mt () : transaction page =
                                                        (get x),
                                                Y = Monad.mp round (get y),
                                                Z = get z};
-                            rpc (Mt.insert xyz)}/>
+                            rpc (mtInsert xyz)}/>
         <button value="delete"
                 onclick={fn _ =>
                             yz <- Monad.exec {Y = Monad.mp round (get y),
@@ -93,7 +95,7 @@ fun mt () : transaction page =
         <hr/>
         {LinkedList.mapX (fn {X = x} =>
                              <xml>X = {[x]}<br/></xml>)
-                         (@Mt.value Subset.intro cxn)}
+                         (MagicTable.value cxn)}
       </body>
     </xml>
 
