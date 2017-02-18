@@ -85,7 +85,7 @@ fun connect user : transaction connection =
     in
         Sql.insert users row;
         src <- source None;
-        return (Record.projs row ++ {Source = src})
+        return (Record.set row {Source = src})
     end
 
 fun instantiate [tf] job variant =

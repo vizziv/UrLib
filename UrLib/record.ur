@@ -14,11 +14,10 @@ fun curry [have] [need] [t] [have ~ need]
 
 fun snoc [ts] (xs : $ts) [nm :: Name] [t] [[nm] ~ ts] (x : t) = xs ++ {nm = x}
 
-fun set [const] [modify] [insert]
-        [const ~ modify] [const ~ insert] [modify ~ insert]
-        (xs : $(const ++ modify)) (ys : $(modify ++ insert))
-        : $(const ++ modify ++ insert) =
-    xs --- modify ++ ys
+fun set [keep] [drop] [insert] [keep ~ drop] [keep ~ insert]
+        (xs : $(keep ++ drop)) (ys : $(insert))
+        : $(keep ++ insert) =
+    xs --- drop ++ ys
 
 fun injqs [keep] [drop] [keep ~ drop]
           (fl_keep : folder keep) (fl_drop : folder drop)

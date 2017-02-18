@@ -92,7 +92,7 @@ fun passed xs votes =
 fun verify xs =
     List.mapi (fn i action =>
                   case roleOf xs.Roles i of
-                      Resistance => Record.projs action ++ {Response = True}
+                      Resistance => Record.set action {Response = True}
                     | Spy => action)
 
 fun succeeded xs (actions : list {Member : _, Response : _}) =
@@ -133,9 +133,8 @@ fun sm group : StateMachine.t _ =
          if passed xs votes then
              return (make [#Mission] xs)
          else
-             return (make [#Propose] ({Attempt = xs.Attempt + 1,
-                                       Leader = nextLeader xs}
-                                      ++ Record.projs xs)),
+             return (make [#Propose] (Record.set xs {Attempt = xs.Attempt + 1,
+                                                     Leader = nextLeader xs})),
      Mission =
       fn {State = xs, Effect = actions} =>
          let
@@ -149,11 +148,11 @@ fun sm group : StateMachine.t _ =
                  return (make [#Done] {Winner = Spy, Roles = xs.Roles})
              else
                  return (make [#Propose]
-                              ({Round = xs.Round + 1,
-                                Score = score,
-                                Attempt = 0,
-                                Leader = nextLeader xs}
-                               ++ Record.projs xs))
+                              (Record.set xs
+                                          {Round = xs.Round + 1,
+                                           Score = score,
+                                           Attempt = 0,
+                                           Leader = nextLeader xs}))
          end,
      Done = fn {State = xs, Effect = ()} => return (make [#Done] xs)}
 

@@ -17,15 +17,13 @@ val snoc : ts ::: {Type} -> $ts
            -> nm :: Name -> t ::: Type -> [[nm] ~ ts]
            => t -> $([nm = t] ++ ts)
 
-val set : const ::: {Type} -> modify ::: {Type} -> insert ::: {Type}
-          -> [const ~ modify] => [const ~ insert] => [modify ~ insert]
-          => $(const ++ modify) -> $(modify ++ insert)
-          -> $(const ++ modify ++ insert)
+val set : keep ::: {Type} -> drop ::: {Type} -> insert ::: {Type}
+          -> [keep ~ drop] => [keep ~ insert]
+          => $(keep ++ drop) -> $(insert) -> $(keep ++ insert)
 
 val injqs : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
             => folder keep -> folder drop
             -> $keep -> $(map option (keep ++ drop))
 
 val mkShow : ts ::: {Type} -> folder ts -> $(map show ts)
-             -> $(map (fn _ => string) ts)
-             -> show $ts
+             -> $(map (fn _ => string) ts) -> show $ts
