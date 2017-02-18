@@ -4,6 +4,8 @@ val proj1 = fn [nm] [t] => proj [nm]
 
 fun projs [keep] [drop] [keep ~ drop] (xs : $(keep ++ drop)) = xs --- drop
 
+fun inj [nm :: Name] [t] (x : t) = {nm = x}
+
 fun rename [nm1 ::_] [nm2 ::_] [t] [ts] [[nm1] ~ ts] [[nm2] ~ ts]
            (xs : $([nm1 = t] ++ ts)) =
     xs -- nm1 ++ {nm2 = xs.nm1}

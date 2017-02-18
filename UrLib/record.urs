@@ -6,6 +6,8 @@ val proj1 : nm ::: Name -> t ::: Type -> {nm : t} -> t
 val projs : keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop]
             => $(keep ++ drop) -> $keep
 
+val inj : nm :: Name -> t ::: Type -> t -> {nm : t}
+
 val rename : nm1 :: Name -> nm2 :: Name -> t ::: Type -> ts ::: {Type}
              -> [[nm1] ~ ts] => [[nm2] ~ ts]
              => $([nm1 = t] ++ ts) -> $([nm2 = t] ++ ts)

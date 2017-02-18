@@ -101,7 +101,7 @@ fun ask group (requests : requests) =
                           requests
         val members = List.mp (Record.proj [#Member]) reqs
         val cond = (SQL T.Group = {[group]}
-                    AND {Sql.lookups (List.mp (Record.snoc {} [#Member]) members)})
+                    AND {Sql.lookups (List.mp (Record.inj [#Member]) members)})
         fun req member =
             case List.find (fn req => req.Member = member) reqs of
                 None => impossible _LOC_
