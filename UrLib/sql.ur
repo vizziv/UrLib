@@ -1,6 +1,9 @@
+open Prelude
+
 fun sqlInjectRow [tables ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
-                 [ts ::: {Type}] (fl : folder ts)
-                 (sql : $(map sql_injectable ts)) (xs : $ts) =
+                 [fields ::: {Type}]
+                 (fl : folder fields) (sql : $(map sql_injectable fields))
+                 (xs : $fields) =
     @map2 [sql_injectable] [ident] [sql_exp tables agg exps]
           (@@sql_inject [tables] [agg] [exps]) fl sql xs
 

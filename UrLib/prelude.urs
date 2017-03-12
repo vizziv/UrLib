@@ -10,6 +10,8 @@ include Types
 
 val id : t ::: Type -> t -> t
 
+val const : a ::: Type -> b ::: Type -> a -> b -> a
+
 val on : a ::: Type -> b ::: Type -> c ::: Type
          -> (b -> b -> c) -> (a -> b) -> a -> a -> c
 

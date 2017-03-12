@@ -12,6 +12,8 @@ open T
 
 fun id [t] (x : t) = x
 
+fun const [a] [b] (x : a) _ = x
+
 fun on [a] [b] [c] (op : b -> b -> c) (f : a -> b) x y = op (f x) (f y)
 
 fun zip [a] [b] [c] (f : a -> b -> c) (xs : list a) (ys : list b) : list c =

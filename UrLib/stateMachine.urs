@@ -20,6 +20,7 @@ end
 signature Output = sig
     include Types
     val init : {Label : label, State : state} -> transaction state
+    (* Returns [None] when the effect doesn't match the state. *)
     val step : {Label : label, Effect : effect} -> transaction (option state)
 end
 

@@ -4,19 +4,19 @@ fun plural (n : int) (x : string) =
                           None => False
                         | Some _ => True
         val lenMinus1 = strlen x - 1
-        val last = strsub x lenMinus1
     in
         show n ^ " " ^
-        if n = 1 then
+        if n = 1 || lenMinus1 < 0 then
             x
         else
-            case last of
+            case strsub x lenMinus1 of
                 #"s" => x ^ "es"
               | #"x" => x ^ "es"
-              | #"y" => if vowel (strsub x (lenMinus1 - 1)) then
-                            x ^ "s"
-                        else
-                            substring x 0 lenMinus1 ^ "ies"
+              | #"y" =>
+                if lenMinus1 = 0 || vowel (strsub x (lenMinus1 - 1)) then
+                    x ^ "s"
+                else
+                    substring x 0 lenMinus1 ^ "ies"
               | _ => x ^ "s"
     end
 
