@@ -140,8 +140,7 @@ val casesTraverse :
 
 val casesDiag :
     K -->
-    tf1 :: (K -> Type) -> tf2 :: (K -> Type) ->
-    tf3 :: (K -> Type) ->
+    tf1 :: (K -> Type) -> tf2 :: (K -> Type) -> tf3 :: (K -> Type) ->
     r ::: {K} -> folder r ->
     $(map (fn t :: K => tf1 t -> tf2 t -> tf3 t) r) ->
     variant (map tf1 r) -> variant (map tf2 r)

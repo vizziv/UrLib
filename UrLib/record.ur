@@ -6,29 +6,35 @@ fun projs [keep] [drop] [keep ~ drop] (xs : $(keep ++ drop)) = xs --- drop
 
 fun inj [nm :: Name] [t] (x : t) = {nm = x}
 
-fun rename [nm1 ::_] [nm2 ::_] [t] [ts] [[nm1] ~ ts] [[nm2] ~ ts]
-           (xs : $([nm1 = t] ++ ts)) =
+fun rename
+        [nm1 ::_] [nm2 ::_] [t] [ts] [[nm1] ~ ts] [[nm2] ~ ts]
+        (xs : $([nm1 = t] ++ ts)) =
     xs -- nm1 ++ {nm2 = xs.nm1}
 
-fun curry [have] [need] [t] [have ~ need]
-          (f : $(have ++ need) -> t) (xs : $have) (ys : $need) =
+fun curry
+        [have] [need] [t] [have ~ need]
+        (f : $(have ++ need) -> t) (xs : $have) (ys : $need) =
     f (xs ++ ys)
 
 fun snoc [ts] (xs : $ts) [nm :: Name] [t] [[nm] ~ ts] (x : t) = xs ++ {nm = x}
 
-fun set [keep] [drop] [insert] [keep ~ drop] [keep ~ insert]
+fun set
+        [keep] [drop] [insert] [keep ~ drop] [keep ~ insert]
         (xs : $(keep ++ drop)) (ys : $(insert))
-        : $(keep ++ insert) =
+    : $(keep ++ insert) =
     xs --- drop ++ ys
 
-fun injqs [keep] [drop] [keep ~ drop]
-          (fl_keep : folder keep) (fl_drop : folder drop)
-          (xs : $keep) =
+fun injqs
+        [keep] [drop] [keep ~ drop]
+        (fl_keep : folder keep) (fl_drop : folder drop)
+        (xs : $keep) =
     @mp [ident] [option] @@Some fl_keep xs
     ++ @map0 [option] (fn [t ::_] => None) fl_drop
 
-fun mkShow [ts] (fl : folder ts) (shows : $(map show ts))
-           (labels : $(map (fn _ => string) ts)) =
+fun mkShow
+        [ts]
+        (fl : folder ts) (shows : $(map show ts))
+        (labels : $(map (fn _ => string) ts)) =
     Basis.mkShow
         (fn (xs : $ts) =>
             "{"

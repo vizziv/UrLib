@@ -1,18 +1,20 @@
 open Prelude
 
 con cont fields keep res =
-    drop ::: {Type} -> [keep ~ drop]
-    => folder keep -> folder drop -> Eq.t fields (keep ++ drop)
+    drop ::: {Type} -> [keep ~ drop] =>
+    folder keep -> folder drop -> Eq.t fields (keep ++ drop)
     -> res
 
 con t fields keep = res ::: Type -> cont fields keep res -> res
 
-fun intro [keep] [drop] [keep ~ drop] fl_keep fl_drop
-          [res] (k : cont (keep ++ drop) keep res) =
+fun intro
+        [keep] [drop] [keep ~ drop] fl_keep fl_drop
+        [res] (k : cont (keep ++ drop) keep res) =
     @@k [drop] ! fl_keep fl_drop Eq.refl
 
-fun mp [fields] [keep] [f] (t : t fields keep)
-       [res] (k : cont (map f fields) (map f keep) res) =
+fun mp
+        [fields] [keep] [f] (t : t fields keep)
+        [res] (k : cont (map f fields) (map f keep) res) =
     t (fn [drop] [keep ~ drop]
           fl_keep fl_drop (pf : Eq.t fields (keep ++ drop)) =>
           @@k [map f drop] !

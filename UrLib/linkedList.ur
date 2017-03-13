@@ -41,8 +41,7 @@ fun mapX [a] [ctx] [[Dyn] ~ ctx] (f : a -> xml ([Dyn] ++ ctx) [] []) =
             case ll of
                 SglNil => xempty
               | SglCons cons => <xml>
-                {xdyn (Monad.mp (compose (Option.get xempty)
-                                         (Option.mp f))
+                {xdyn (Monad.mp (Option.get xempty <<< Option.mp f)
                                 cons.Carq)}
                 {goSgl cons.Cdr}
               </xml>
@@ -50,7 +49,7 @@ fun mapX [a] [ctx] [[Dyn] ~ ctx] (f : a -> xml ([Dyn] ++ ctx) [] []) =
     in
         (* The extra [xdyn] layer forces evaluation of the linked list on the
            client side, which is necessary for code generation. *)
-        compose xdyn (compose return goSgl)
+        xdyn <<< return <<< goSgl
     end
 
 datatype llSources a =
@@ -115,11 +114,11 @@ fun iterPred [a] (f : source (option a) -> tunit) (p : a -> bool)
                 goSrc cons.Cdr
         and goSrc src = bind (get src) goLl
     in
-        compose goSrc (Record.proj [#First])
+        goSrc <<< Record.proj [#First]
     end
 
 fun update [a] (f : a -> a) =
-    iterPred (fn src => bind (get src) (compose (set src) (Option.mp f)))
+    iterPred (fn src => bind (get src) (Option.mp f >>> set src))
 
 val delete = fn [a] => iterPred (fn src => set src None)
 

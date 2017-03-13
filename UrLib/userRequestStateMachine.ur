@@ -59,10 +59,10 @@ end)
 type inference. *)
 
 val translateRequest =
-    compose (@casesTraverse [fn _ => _] [fn _ => _] fl_handlerStates _) request
+    request >>> (@casesTraverse [fn _ => _] [fn _ => _] fl_handlerStates _)
 
 val translateResponse =
-    compose (@casesTraverse [fn _ => _] [fn _ => _] fl_handlerStates _) response
+    response >>> (@casesTraverse [fn _ => _] [fn _ => _] fl_handlerStates _)
 
 con responses (hs :: {(Type * Type * Type * Type)}) =
     variant (map (fn h => list {Member : member, Response : h.2}) hs)

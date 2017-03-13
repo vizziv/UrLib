@@ -170,13 +170,13 @@ fun subscribeListeners connection listeners =
             @mapNm [fn h => (h.2 -> tunit) -> h.1 -> tunit]
                    [fn hs h => h.1 -> tunit]
                    fl_handlers
-                   (fn [others ::_] [nm ::_] [h]
-                       [[nm] ~ others] _ (pf : Eq.t _ _)
-                       l0 =>
-                       l0 (fn resp =>
-                              answer user job
-                                     (Eq.cast pf [compose variant (map snd)]
-                                              (make [nm] resp))))
+                   (fn [others ::_] [nm ::_] [h] [[nm] ~ others]
+                       _ (pf : Eq.t _ _)
+                       l =>
+                       l (fn resp =>
+                             answer user job
+                                    (Eq.cast pf [compose variant (map snd)]
+                                             (make [nm] resp))))
                    listeners
     in
         spawnListener (fn {Job = job, Request = req} =>
