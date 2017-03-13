@@ -30,10 +30,10 @@ open M
 type connection = channel data
 
 table listeners :
-      {Group : group,
-       Member : member,
-       Channel : channel data}
-          PRIMARY KEY (Group, Member)
+    {Group : group,
+     Member : member,
+     Channel : channel data}
+    PRIMARY KEY (Group, Member)
 
 fun tell group data =
     queryI1 (Sql.selectLookup listeners {Group = group})

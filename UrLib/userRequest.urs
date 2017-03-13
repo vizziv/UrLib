@@ -5,7 +5,7 @@ signature Types = sig
     type group
     type member
     type requests =
-         variant (map (fn h => list {Member : member, Request : h.1}) handlers)
+        variant (map (fn h => list {Member : member, Request : h.1}) handlers)
 end
 
 signature Input = sig
@@ -14,11 +14,11 @@ signature Input = sig
     val sqlp_group : sql_injectable_prim group
     val sqlp_member : sql_injectable_prim member
     val eq_member : eq member
-    val cont : group
-               -> (requests -> tunit)
-               -> $(map (fn h =>
-                            list {Member : member, Response : h.2} -> tunit)
-                        handlers)
+    val cont :
+        group ->
+        (requests -> tunit)
+        -> $(map (fn h => list {Member : member, Response : h.2} -> tunit)
+                 handlers)
 end
 
 signature Output = sig
