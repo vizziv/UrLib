@@ -60,8 +60,9 @@ con sources a =
     {First : source (llSources a),
      Last : source (source (llSources a))}
 
-fun mk [a] (fold : b ::: Type
-                   -> (a -> b -> transaction b) -> b -> transaction b)
+fun mk [a] (fold : b ::: Type ->
+                   (a -> b -> transaction b) -> b
+                   -> transaction b)
     : transaction (sources a) =
     first <- source SrcNil;
     let
