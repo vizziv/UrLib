@@ -21,7 +21,7 @@ val mapX :
 con sources :: Type -> Type
 
 (* Argument should be a fold that builds the list.
-   It should use the [a -> b -> transaction b] function as cons. *)
+   It should use the [a -> b -> transaction b] function as "snoc". *)
 val mk :
     a ::: Type ->
     (b ::: Type -> (a -> b -> transaction b) -> b -> transaction b)

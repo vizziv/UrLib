@@ -3,10 +3,10 @@ signature Types = sig
     con compose = K1 ==> K2 ==> K3 ==>
      fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
     con forget = K ==> fn (t :: K) => ()
-    type void
+    type void = variant []
 end
 
-structure T : Types where type void = variant [] = struct end
+structure T : Types = struct end
 
 open T
 

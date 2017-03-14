@@ -3,7 +3,7 @@ signature Types = sig
     con compose = K1 ==> K2 ==> K3 ==>
      fn (f :: K2 -> K3) (g :: K1 -> K2) (x :: K1) => f (g x)
     con forget = K ==> fn (t :: K) => ()
-    type void
+    type void = variant []
 end
 
 include Types
@@ -22,8 +22,10 @@ val zip :
     (a -> b -> c)
     -> list a -> list b -> list c
 
+(* For proving that a branch cannot be taken. *)
 val contradiction : t ::: Type -> void -> t
 
+(* For promising, without proof, that a branch cannot be taken. *)
 val impossible : t ::: Type -> string -> t
 
 structure Functor : sig
@@ -36,7 +38,7 @@ structure Functor : sig
         f ::: (Type -> Type) -> t f ->
         a ::: Type -> b ::: Type ->
         (a -> b)
-        -> (f a -> f b)
+        -> f a -> f b
     val monad : f ::: (Type -> Type) -> monad f -> t f
     val list : t list
     val field :
@@ -68,8 +70,9 @@ val spawnListener : t ::: Type -> (t -> tunit) -> channel t -> tunit
 val xempty : ctx ::: {Unit} -> xml ctx [] []
 
 val xdyn :
-    ctx ::: {Unit} -> [[Dyn] ~ ctx]
-    => signal (xml ([Dyn] ++ ctx) [] []) -> (xml ([Dyn] ++ ctx) [] [])
+    ctx ::: {Unit} -> [[Dyn] ~ ctx] =>
+    signal (xml ([Dyn] ++ ctx) [] [])
+    -> (xml ([Dyn] ++ ctx) [] [])
 
 val xactive : transaction xbody -> xbody
 
