@@ -27,18 +27,12 @@ fun roleOf roles i =
         None => impossible _LOC_
       | Some role => role
 
-fun countBit f roles : list {Response : bool, Member : member} -> int =
-    let
-        fun safety resp =
-            case roleOf roles resp.Member of
-                Resistance => True
-              | Spy => resp.Response
-    in
-        List.foldl (fn resp acc => bit (f (safety resp)) + acc) 0
-    end
+fun countBit f : list {Response : bool, Member : member} -> int =
+    List.foldl (fn resp acc => acc + bit (f resp.Response)) 0
 
-val countTrue = countBit id
-val countFalse = countBit not
+val countSuccess = countBit id
+val countFail = countBit not
+val countApprove = countBit id
 
 val spies =
     mapiPartial (fn i role =>
@@ -86,18 +80,16 @@ fun missionRequest xs =
       | None => impossible _LOC_
 
 fun passed xs votes =
-    (* TODO: don't use same counting function for voting and mission. *)
-    countTrue (List.mp (fn _ => Spy) xs.Roles) votes > xs.NumPlayers / 2
+    countApprove votes > xs.NumPlayers / 2
 
-fun verify xs =
+fun ensureLegal xs =
     List.mapi (fn i action =>
                   case roleOf xs.Roles i of
                       Resistance => Record.set action {Response = True}
                     | Spy => action)
 
 fun succeeded xs (actions : list {Member : _, Response : _}) =
-    countFalse xs.Roles (verify xs actions)
-    <= bit (xs.Round = 3 && xs.NumPlayers < 7)
+    countFail actions <= bit (xs.Round = 3 && xs.NumPlayers < 7)
 
 fun team xs proposals =
     case proposals of
@@ -138,10 +130,11 @@ fun sm group : StateMachine.t _ =
      Mission =
       fn {State = xs, Effect = actions} =>
          let
+             val actions = ensureLegal xs actions
              val score = xs.Score + bit (succeeded xs actions)
          in
-             Bc.tell group (Actions {Successes = countTrue xs.Roles actions,
-                                     Fails = countFalse xs.Roles actions});
+             Bc.tell group (Actions {Successes = countSuccess actions,
+                                     Fails = countFail actions});
              if score >= 3 then
                  return (make [#Done] {Winner = Resistance, Roles = xs.Roles})
              else if xs.Round - score >= 3 then

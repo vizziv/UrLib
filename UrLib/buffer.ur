@@ -15,7 +15,7 @@ fun renderL lines =
     case lines of
         End => xempty
       | Line (line, linesS) =>
-        <xml>{[line]}<br/>{xdyn (renderS linesS)}/></xml>
+        <xml>{[line]}<br/>{xdyn (renderS linesS)}</xml>
 
 and renderS linesS =
     lines <- signal linesS;
