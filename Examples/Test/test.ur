@@ -1,9 +1,5 @@
 open Prelude
 
-structure Speed = Enum.Make(struct
-    val label = {Hyper = "Hyper", Ludicrous = "Ludicrous", Plaid = "Plaid"}
-end)
-
 structure Ureq = UserRequest.Make(struct
     con handlers = [A = (int, int), B = (int, int)]
     type group = int
@@ -68,29 +64,32 @@ fun noneify [a] b (v : a) : option a = if b then Some v else None
 fun deleteYz yz = MagicTable.delete Mt.t (MagicTable.lookup yz)
 
 fun mt () : transaction page =
-    cxn <- MagicTable.connect Mt.t (MagicTable.select (MagicTable.lookup {Z = True}));
     x <- source "";
-    y <- source 0.0;
+    y <- source (Some 0.0);
     z <- source False;
+    cxn <- MagicTable.connect Mt.t (MagicTable.select (MagicTable.lookup {Z = True}));
     return <xml>
-      <body>
-        {xaction (MagicTable.listen cxn)}
+      <body onload={MagicTable.listen cxn}>
         <h1>MagicTable Test</h1>
         <ctextbox source={x}/><br/>
         <cnumber source={y}/><br/>
         <ccheckbox source={z}/><br/>
         <button value="insert"
                 onclick={fn _ =>
-                            xyz <- Monad.exec {X = Monad.mp
-                                                       (@readError Speed.read)
-                                                       (get x),
-                                               Y = Monad.mp round (get y),
-                                               Z = get z};
+                            xyz <- Monad.exec
+                                       {X = get x,
+                                        Y = Monad.mp (Option.get 0.0
+                                                      >>> round)
+                                                     (get y),
+                                        Z = get z};
                             rpc (mtInsert xyz)}/>
         <button value="delete"
                 onclick={fn _ =>
-                            yz <- Monad.exec {Y = Monad.mp round (get y),
-                                              Z = get z};
+                            yz <- Monad.exec
+                                      {Y = Monad.mp (Option.get 0.0
+                                                     >>> round)
+                                                    (get y),
+                                       Z = get z};
                             rpc (deleteYz yz)}/>
         <hr/>
         {LinkedList.mapX (fn {X = x} =>

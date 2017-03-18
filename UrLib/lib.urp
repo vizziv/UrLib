@@ -3,11 +3,11 @@ $/option
 $/monad
 eq
 prelude
-enum
 record
 subset
 str
 sql
+onload
 linkedList
 magicTable
 ui

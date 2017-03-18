@@ -305,26 +305,31 @@ fun formNew (infoSrc : source _) sr = <xml>
 </xml>
 
 fun formPropose sr =
-    srcs <- List.tabulateM (fn _ => source 0.0) sr.Request.MissionSize;
+    srcs <- List.tabulateM (fn _ => source (Some 0.0)) sr.Request.MissionSize;
     let
         val numPlayers = sr.Request.NumPlayers
         val sgl =
-            team <- List.mapM (compose (Monad.mp round) signal) srcs;
-            if distinct team
-               && minimum numPlayers team >= 0
-               && maximum 0 team < numPlayers then
-                return (Ui.submitButton {Value = "Propose",
-                                         Onclick = sr.Submit team})
-            else
-                return xempty
+            sgls <- List.mapM signal srcs;
+            case List.mapM (Option.mp round) sgls of
+                None => return xempty
+              | Some team =>
+                if distinct team
+                   && minimum numPlayers team >= 0
+                   && maximum 0 team < numPlayers then
+                    return (Ui.submitButton {Value = "Propose",
+                                             Onclick = sr.Submit team})
+                else
+                    return xempty
     in
         return <xml>
-          {List.mapX (fn src => <xml>
-            <cnumber source={src}
-                     min={0.0}
-                     max={float (numPlayers - 1)}
-                     step={1.0}/>
-          </xml>) srcs}
+          {List.mapX
+               (fn src => <xml>
+                  <cnumber source={src}
+                           min={0.0}
+                           max={float (numPlayers - 1)}
+                           step={1.0}/>
+                </xml>)
+               srcs}
           {xdyn sgl}
         </xml>
     end
