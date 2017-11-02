@@ -37,8 +37,8 @@ val set :
 val injqs :
     keep ::: {Type} -> drop ::: {Type} -> [keep ~ drop] =>
     folder keep -> folder drop ->
-    $keep ->
-    $(map option (keep ++ drop))
+    $keep
+    -> $(map option (keep ++ drop))
 
 val mkShow :
     ts ::: {Type} -> folder ts -> $(map show ts) ->
