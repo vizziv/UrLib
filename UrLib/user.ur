@@ -1,3 +1,5 @@
+(* TODO: separate client-side cookie from server-side ID. *)
+
 type t = int
 
 cookie user : t

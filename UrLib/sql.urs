@@ -113,6 +113,14 @@ val insertRandKeys :
     $vals
     -> transaction $(mapU int keys)
 
+val updateRandKeys :
+    keys ::: {Unit} -> vals ::: {Type} -> uniques ::: {{Unit}} ->
+    [keys ~ vals] =>
+    folder keys ->
+    sql_table (mapU int keys ++ vals) uniques ->
+    $(mapU int keys)
+    -> transaction $(mapU int keys)
+
 val compat :
     tabs ::: {{Type}} -> agg ::: {{Type}} -> exps ::: {Type} ->
     tab ::: Name -> keys ::: {Type} -> others ::: {Type} ->

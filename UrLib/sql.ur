@@ -127,26 +127,48 @@ fun deleteLookup
 fun insertRandKeys
         [keys ::: {Unit}] [vals ::: {Type}] [uniques ::: {{Unit}}]
         [keys ~ vals]
-        (flKeys : folder keys) (flVals : folder vals)
-        (sqlVals : $(map sql_injectable vals))
+        (fl_keys : folder keys) (fl_vals : folder vals)
+        (sql_vals : $(map sql_injectable vals))
         (tab : sql_table (mapU int keys ++ vals) uniques) (xs : $vals)
   : transaction $(mapU int keys) =
     let
-        val sqlKeys =
-            @map0 [fn _ => sql_injectable int] (fn [t ::_] => _) flKeys
-        val flKeys : folder (mapU int keys) = @Folder.mp flKeys
+        val sql_keys =
+            @map0 [fn _ => sql_injectable int] (fn [t ::_] => _) fl_keys
+        val fl_keys : folder (mapU int keys) = @Folder.mp fl_keys
         fun randKeys () =
             ks <- @Monad.mapR0 _ [fn _ => int]
                    (fn [nm ::_] [t ::_] => rand)
-                   flKeys;
-            c <- oneRowE1 (@countLookup ! flKeys sqlKeys _ tab ks);
+                   fl_keys;
+            c <- oneRowE1 (@countLookup ! fl_keys sql_keys _ tab ks);
             if c = 0 then return ks else randKeys ()
     in
         ks <- randKeys ();
         @insert
-         (@Folder.concat ! flKeys flVals) (sqlKeys ++ sqlVals)
+         (@Folder.concat ! fl_keys fl_vals) (sql_keys ++ sql_vals)
          tab (ks ++ xs);
         return ks
+    end
+
+fun updateRandKeys
+        [keys ::: {Unit}] [others ::: {Type}] [uniques ::: {{Unit}}]
+        [keys ~ others]
+        (fl : folder keys)
+        (tab : sql_table (mapU int keys ++ others) uniques)
+        (ks : $(mapU int keys))
+  : transaction $(mapU int keys) =
+    let
+        val sql = @map0 [fn _ => sql_injectable int] (fn [t ::_] => _) fl
+        val fl : folder (mapU int keys) = @Folder.mp fl
+        fun randKeys () =
+            ks <- @Monad.mapR0 _ [fn _ => int]
+                   (fn [nm ::_] [t ::_] => rand)
+                   fl;
+            c <- oneRowE1 (@countLookup ! fl sql _ tab ks);
+            if c = 0 then return ks else randKeys ()
+    in
+        ksNew <- randKeys ();
+        @update ! fl sql tab (@lookup ! ! fl sql ks) ksNew;
+        return ksNew
     end
 
 con compatAcc
