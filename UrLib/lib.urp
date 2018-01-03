@@ -7,6 +7,7 @@ record
 subset
 str
 sql
+pulse
 cookieRef
 user
 onload

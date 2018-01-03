@@ -1,3 +1,5 @@
+(* TODO: pulse and cookie expiration. *)
+
 open Prelude
 
 signature Types = sig
