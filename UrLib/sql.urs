@@ -36,6 +36,13 @@ val select :
     sql_exp [T = vals ++ others] [] [] bool
     -> sql_query [] [] [T = vals] []
 
+val count :
+    fields ::: {Type} -> tabl ::: Type ->
+    fieldsOf tabl fields ->
+    tabl ->
+    sql_exp [T = fields] [] [] bool
+    -> sql_query [] [] [] [C = int]
+
 val lookup :
     tabs ::: {{Type}} -> agg ::: {{Type}} -> exps ::: {Type} ->
     tab ::: Name -> keys ::: {Type} -> others ::: {Type} ->
@@ -70,6 +77,15 @@ val selectLookups :
     list $keys
     -> sql_query [] [] [T = vals] []
 
+val countLookup :
+    keys ::: {Type} -> others ::: {Type} ->
+    [keys ~ others] =>
+    folder keys -> $(map sql_injectable keys) ->
+    tabl ::: Type -> fieldsOf tabl (keys ++ others) ->
+    tabl ->
+    $keys
+    -> sql_query [] [] [] [C = int]
+
 val updateLookup :
     unchanged ::: {Type} -> uniques ::: {{Unit}} ->
     changed ::: {Type} -> [changed ~ unchanged] =>
@@ -88,6 +104,14 @@ val deleteLookup :
     sql_table (keys ++ others) uniques ->
     $keys
     -> tunit
+
+val insertRandKeys :
+    keys ::: {Unit} -> vals ::: {Type} -> uniques ::: {{Unit}} ->
+    [keys ~ vals] =>
+    folder keys -> folder vals -> $(map sql_injectable vals) ->
+    sql_table (mapU int keys ++ vals) uniques ->
+    $vals
+    -> transaction $(mapU int keys)
 
 val compat :
     tabs ::: {{Type}} -> agg ::: {{Type}} -> exps ::: {Type} ->

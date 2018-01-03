@@ -33,24 +33,12 @@ fun select
         [vals ::: {Type}] [others ::: {Type}] [vals ~ others]
         [tabl] (_ : fieldsOf tabl (vals ++ others))
         (tab : tabl) (cond : sql_exp [T = vals ++ others] [] [] bool) =
-    let
-        val q1 =
-            sql_query1
-                [[]]
-                {Distinct = False,
-                 From = sql_from_table [#T] tab,
-                 Where = cond,
-                 GroupBy = sql_subset_all [[T = vals ++ others]],
-                 Having = sql_inject True,
-                 SelectFields = sql_subset [[T = (vals, others)]],
-                 SelectExps = {}}
-    in
-        sql_query
-            {Rows = q1,
-             OrderBy = sql_order_by_Nil [[]],
-             Limit = sql_no_limit,
-             Offset = sql_no_offset}
-    end
+    (SELECT T.{{vals}} FROM tab AS T WHERE {cond})
+
+fun count
+        [fields ::: {Type}] [tabl] (_ : fieldsOf tabl fields)
+        (tab : tabl) (cond : sql_exp [T = fields] [] [] bool) =
+    (SELECT COUNT( * ) AS C FROM tab AS T WHERE {cond})
 
 con lookupAcc
         (tabs :: {{Type}}) (agg :: {{Type}}) (exps :: {Type})
@@ -100,6 +88,13 @@ fun selectLookup
         (tab : tabl) (ks : $keys) =
     @@select [vals] [keys ++ others] ! [_] _ tab (@lookup ! ! fl sql ks)
 
+fun countLookup
+        [keys ::: {Type}] [others ::: {Type}] [keys ~ others]
+        (fl : folder keys) (sql : $(map sql_injectable keys))
+        [tabl] (_ : fieldsOf tabl (keys ++ others))
+        (tab : tabl) (ks : $keys) =
+    @@count [keys ++ others] [_] _ tab (@lookup ! ! fl sql ks)
+
 fun selectLookups
         [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
         [keys ~ vals] [keys ~ others] [vals ~ others]
@@ -127,6 +122,32 @@ fun deleteLookup
         (fl : folder keys) (sql : $(map sql_injectable keys))
         (tab : sql_table (keys ++ others) uniques) (ks : $keys) =
     delete tab (@lookup ! ! fl sql ks)
+
+(* The tuple of keys is guaranteed to be unique. *)
+fun insertRandKeys
+        [keys ::: {Unit}] [vals ::: {Type}] [uniques ::: {{Unit}}]
+        [keys ~ vals]
+        (flKeys : folder keys) (flVals : folder vals)
+        (sqlVals : $(map sql_injectable vals))
+        (tab : sql_table (mapU int keys ++ vals) uniques) (xs : $vals)
+  : transaction $(mapU int keys) =
+    let
+        val sqlKeys =
+            @map0 [fn _ => sql_injectable int] (fn [t ::_] => _) flKeys
+        val flKeys : folder (mapU int keys) = @Folder.mp flKeys
+        fun randKeys () =
+            ks <- @Monad.mapR0 _ [fn _ => int]
+                   (fn [nm ::_] [t ::_] => rand)
+                   flKeys;
+            c <- oneRowE1 (@countLookup ! flKeys sqlKeys _ tab ks);
+            if c = 0 then return ks else randKeys ()
+    in
+        ks <- randKeys ();
+        @insert
+         (@Folder.concat ! flKeys flVals) (sqlKeys ++ sqlVals)
+         tab (ks ++ xs);
+        return ks
+    end
 
 con compatAcc
         (tabs :: {{Type}}) (agg :: {{Type}}) (exps :: {Type})

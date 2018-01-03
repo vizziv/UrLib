@@ -3,6 +3,7 @@ type t = int
 cookie user : t
 
 table users : {User : t, Pulse : time}
+    PRIMARY KEY User
 
 val refresh = 3600 (* 1 hour in seconds *)
 val timeout = 2 * refresh
@@ -17,9 +18,8 @@ task periodic refresh = fn () =>
                     return ())
 
 val newUser =
-    u <- rand;
     p <- now;
-    Sql.insert users {User = u, Pulse = p};
+    {User = u} <- Sql.insertRandKeys users {Pulse = p};
     return u
 
 fun verify uq =
@@ -37,4 +37,7 @@ fun verify uq =
                  return ());
             return u
 
-val get = bind (getCookie user) verify
+val get =
+    u <- bind (getCookie user) verify;
+    setCookie user {Value = u, Expires = None, Secure = True};
+    return u
