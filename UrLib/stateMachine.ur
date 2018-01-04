@@ -19,15 +19,7 @@ signature Input = sig
     val sm : label -> t states
 end
 
-signature Output = sig
-    include Types
-    val init : {Label : label, State : state} -> transaction state
-    val step : {Label : label, Effect : effect} -> transaction (option state)
-end
-
-functor Make(M : Input) : Output
-    where con states = M.states
-    where type label = M.label = struct
+functor Make(M : Input) = struct
 
 open M
 

@@ -1,5 +1,3 @@
-open Prelude
-
 fun sqlInjectRow
         [tables ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
         [fields ::: {Type}]

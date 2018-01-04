@@ -17,13 +17,13 @@ signature Input = sig
     val sm : label -> t states
 end
 
-signature Output = sig
+functor Make(M : Input) : sig
     include Types
-    val init : {Label : label, State : state} -> transaction state
+    val init :
+        {Label : M.label, State : M.state}
+        -> transaction M.state
     (* Returns [None] when the effect doesn't match the state. *)
-    val step : {Label : label, Effect : effect} -> transaction (option state)
+    val step :
+        {Label : M.label, Effect : M.effect}
+        -> transaction (option M.state)
 end
-
-functor Make(M : Input) : Output
-    where con states = M.states
-    where type label = M.label

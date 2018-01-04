@@ -6,14 +6,10 @@ val sqlp : sql_injectable_prim t
 
 val beat : transaction t
 
-signature Types = sig
+signature Input = sig
     con keys :: {Type}
     con others :: {Type}
     con pulse :: Name
-end
-
-signature Input = sig
-    include Types
     constraint keys ~ others
     constraint [pulse] ~ keys
     constraint [pulse] ~ others
@@ -24,13 +20,6 @@ signature Input = sig
     val seconds_timeout : int
 end
 
-signature Output = sig
-    include Types
-    constraint [pulse] ~ keys
-    val ping : $([pulse = t] ++ keys) -> tunit
+functor Make(M : Input) : sig
+    val ping : $([M.pulse = t] ++ M.keys) -> tunit
 end
-
-functor Make(M : Input) : Output
-    where con keys = M.keys
-    where con others = M.others
-    where con pulse = M.pulse

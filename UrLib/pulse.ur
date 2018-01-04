@@ -6,14 +6,10 @@ val sqlp = _
 
 val beat = Monad.mp toSeconds now
 
-signature Types = sig
+signature Input = sig
     con keys :: {Type}
     con others :: {Type}
     con pulse :: Name
-end
-
-signature Input = sig
-    include Types
     constraint keys ~ others
     constraint [pulse] ~ keys
     constraint [pulse] ~ others
@@ -24,16 +20,7 @@ signature Input = sig
     val seconds_timeout : int
 end
 
-signature Output = sig
-    include Types
-    constraint [pulse] ~ keys
-    val ping : $([pulse = t] ++ keys) -> tunit
-end
-
-functor Make(M : Input) : Output
-    where con keys = M.keys
-    where con others = M.others
-    where con pulse = M.pulse = struct
+functor Make(M : Input) = struct
 
 open M
 

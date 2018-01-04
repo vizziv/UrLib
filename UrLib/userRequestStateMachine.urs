@@ -28,26 +28,22 @@ signature Input = sig
     val response : group -> responseTranslations
 end
 
-signature Output = sig
-    include Types
+functor Make(M : Input) : sig
     (* Server-side initialization for each group. *)
-    val init : {Group : group, State : variant (map fst states)} -> tunit
+    val init : {Group : M.group, State : variant (map fst M.states)} -> tunit
     type connection
-    val groupOf : connection -> group
-    val memberOf : connection -> member
+    val groupOf : connection -> M.group
+    val memberOf : connection -> M.member
     type submitRequest =
         variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
-                     handlers)
+                     M.handlers)
     (* Server-side initialization for each user. *)
-    val connect : {Group : group, Member : member} -> transaction connection
+    val connect :
+        {Group : M.group, Member : M.member}
+        -> transaction connection
     (* Client-side initialization for each user.*)
     val listen : connection -> tunit
     (* The signal is set to [Some _] whenever a request is recieved and to
        [None] after each submission. *)
     val value : connection -> signal (option submitRequest)
 end
-
-functor Make(M : Input) : Output
-    where con handlerStates = M.handlerStates
-    where type group = M.group
-    where type member = M.member

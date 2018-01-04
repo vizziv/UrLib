@@ -1,5 +1,3 @@
-include Prelude.Types
-
 val sqlInjectRow :
     tables ::: {{Type}} -> agg ::: {{Type}} -> exps ::: {Type} ->
     fields ::: {Type} ->
@@ -12,7 +10,7 @@ val insert :
     folder fields -> $(map sql_injectable fields) ->
     sql_table fields uniques ->
     $fields
-    -> tunit
+    -> transaction unit
 
 val update :
     unchanged ::: {Type} -> uniques ::: {{Unit}} ->
@@ -21,13 +19,13 @@ val update :
     sql_table (changed ++ unchanged) uniques ->
     sql_exp [T = changed ++ unchanged] [] [] bool ->
     $changed
-    -> tunit
+    -> transaction unit
 
 val delete :
     fields ::: {Type} -> uniques ::: {{Unit}} ->
     sql_table fields uniques ->
     sql_exp [T = fields] [] [] bool
-    -> tunit
+    -> transaction unit
 
 val select :
     vals ::: {Type} -> others ::: {Type} -> [vals ~ others] =>
@@ -95,7 +93,7 @@ val updateLookup :
     sql_table (keys ++ changed ++ unchanged) uniques ->
     $keys ->
     $changed
-    -> tunit
+    -> transaction unit
 
 val deleteLookup :
     keys ::: {Type} -> others ::: {Type} -> uniques ::: {{Unit}} ->
@@ -103,7 +101,7 @@ val deleteLookup :
     folder keys -> $(map sql_injectable keys) ->
     sql_table (keys ++ others) uniques ->
     $keys
-    -> tunit
+    -> transaction unit
 
 val insertRandKeys :
     keys ::: {Unit} -> vals ::: {Type} -> uniques ::: {{Unit}} ->

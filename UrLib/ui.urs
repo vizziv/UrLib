@@ -11,9 +11,7 @@ val withSources :
 
 val submitButtons :
     r ::: {Unit} -> folder r ->
-    $(mapU {Value : string, Onclick : transaction unit} r)
+    $(mapU {Value : string, Onclick : tunit} r)
     -> xbody
 
-val submitButton :
-    {Value : string, Onclick : transaction unit}
-    -> xbody
+val submitButton : {Value : string, Onclick : tunit} -> xbody

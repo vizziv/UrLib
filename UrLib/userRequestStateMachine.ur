@@ -28,24 +28,7 @@ signature Input = sig
     val response : group -> responseTranslations
 end
 
-signature Output = sig
-    include Types
-    val init : {Group : group, State : variant (map fst states)} -> tunit
-    type connection
-    val groupOf : connection -> group
-    val memberOf : connection -> member
-    type submitRequest =
-        variant (map (fn h => {Submit : h.2 -> tunit, Request : h.1})
-                     handlers)
-    val connect : {Group : group, Member : member} -> transaction connection
-    val listen : connection -> tunit
-    val value : connection -> signal (option submitRequest)
-end
-
-functor Make(M : Input) : Output
-    where con handlerStates = M.handlerStates
-    where type group = M.group
-    where type member = M.member = struct
+functor Make(M : Input) = struct
 
 open M
 

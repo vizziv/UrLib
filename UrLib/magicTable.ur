@@ -69,15 +69,7 @@ signature Input = sig
     val label_fields : $(map (fn _ => string) fields)
 end
 
-signature Output = sig
-    include Types
-    val t : t fields
-    (* For debugging. *)
-    table tab : fields
-end
-
-functor Make(M : Input) : Output
-    where con fields = M.fields = struct
+functor Make(M : Input) = struct
 
 open M
 
@@ -105,12 +97,15 @@ val sql_listeners
     : $(map sql_injectable ([chan = channel message] ++ fieldqs)) =
     {chan = _} ++ @mp [_] [compose _ _] @@sql_option_prim fl_fields sqlp_fields
 
+val selectListeners =
+    @Sql.selectCompat ! ! ! fl_fields sqlp_fields _ listeners
+
 fun insert xs =
     let
         val xqs = @Record.injqs ! fl_fields Folder.nil xs
     in
         @Sql.insert fl_fields sql_fields tab xs;
-        queryI1 (@Sql.selectCompat ! ! ! fl_fields sqlp_fields _ listeners xqs)
+        queryI1 (selectListeners xqs)
                 (fn (row : {chan : _}) =>
                     debug "sending insert";
                     send row.chan (Insert xs))
@@ -127,7 +122,7 @@ fun update [write] (sub : Subset.t fields write)
                             (Eq.cast pf [fn fs => sql_table fs []] tab)
                             (Eq.cast pf [filter] filter).Sql
                             xs;
-                queryI1 (@Sql.selectCompat ! ! ! fl_fields sqlp_fields _ listeners xqs)
+                queryI1 (selectListeners xqs)
                         (fn (row : {chan : _}) =>
                             debug "sending update";
                             send row.chan (Update {Values = xqs,
@@ -139,7 +134,7 @@ fun delete (filter : filter fields) =
         val xqs = filter.Fieldqs
     in
         @Sql.delete tab filter.Sql;
-        queryI1 (@Sql.selectCompat ! ! ! fl_fields sqlp_fields _ listeners xqs)
+        queryI1 (selectListeners xqs)
                 (fn (row : {chan : _}) =>
                     debug "sending delete";
                     send row.chan (Delete xqs))

@@ -59,12 +59,9 @@ signature Input = sig
     val label_fields : $(map (fn _ => string) fields)
 end
 
-signature Output = sig
-    include Types
-    val t : t fields
-    (* For debugging. *)
-    table tab : fields
-end
 
-functor Make(M : Input) : Output
-    where con fields = M.fields
+functor Make(M : Input) : sig
+    val t : t M.fields
+    (* For debugging. *)
+    table tab : M.fields
+end
