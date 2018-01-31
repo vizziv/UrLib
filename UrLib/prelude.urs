@@ -80,23 +80,23 @@ val xaction : tunit -> xbody
 
 val mapNm0 :
     K -->
-    tf :: ({K} -> K -> Type) ->
+    tf :: (K -> Type) ->
     r ::: {K} -> folder r ->
     (others :: {K} -> nm :: Name -> t ::: K -> [[nm] ~ others] =>
      folder others -> Eq.t ([nm = t] ++ others) r
-     -> tf ([nm = t] ++ others) t)
-    -> $(map (tf r) r)
+     -> tf t)
+    -> $(map tf r)
 
 val mapNm :
     K -->
-    tf1 :: (K -> Type) -> tf2 :: ({K} -> K -> Type) ->
+    tf1 :: (K -> Type) -> tf2 :: (K -> Type) ->
     r ::: {K} -> folder r ->
     (others :: {K} -> nm :: Name -> t ::: K -> [[nm] ~ others] =>
      folder others -> Eq.t ([nm = t] ++ others) r ->
      tf1 t
-     -> tf2 ([nm = t] ++ others) t) ->
+     -> tf2 t) ->
     $(map tf1 r)
-    -> $(map (tf2 r) r)
+    -> $(map tf2 r)
 
 val cases :
     ts ::: {Type} -> u ::: Type ->

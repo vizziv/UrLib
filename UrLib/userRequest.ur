@@ -151,7 +151,7 @@ fun subscribeListeners connection listeners =
         val user = connection --- [Channel = _, Source = _]
         fun ls job =
             @mapNm [fn h => (h.2 -> tunit) -> h.1 -> tunit]
-                   [fn hs h => h.1 -> tunit]
+                   [fn h => h.1 -> tunit]
                    fl_handlers
                    (fn [others ::_] [nm ::_] [h] [[nm] ~ others]
                        _ (pf : Eq.t _ _)
@@ -191,7 +191,7 @@ fun listen (connection : connection) =
                                           Request = req})))
             end
         val listeners =
-            @mapNm0 [fn _ h => (h.2 -> tunit) -> h.1 -> tunit] fl_handlers f
+            @mapNm0 [fn h => (h.2 -> tunit) -> h.1 -> tunit] fl_handlers f
     in
         subscribeListeners connection listeners
     end

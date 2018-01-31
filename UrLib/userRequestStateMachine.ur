@@ -51,7 +51,7 @@ con responses (hs :: {(Type * Type * Type * Type)}) =
     variant (map (fn h => list {Member : member, Response : h.2}) hs)
 
 fun cont (group : group) (ask : _ -> tunit) =
-    @mapNm0 [fn hs h => list {Member : member, Response : h.2} -> tunit]
+    @mapNm0 [fn h => list {Member : member, Response : h.2} -> tunit]
             fl_handlerStates
             (fn [others ::_] [nm ::_] [h] [[nm] ~ others] _
                 (pf : Eq.t _ _) resps =>

@@ -72,22 +72,22 @@ fun xaction code = xactive (code; return xempty)
 
 fun mapNm0
         [K]
-        [tf :: {K} -> K -> Type]
+        [tf :: K -> Type]
         [r ::: {K}] (fl : folder r)
         (f : others :: {K} -> nm :: Name -> t ::: K -> [[nm] ~ others] =>
-         folder others -> Eq.t ([nm = t] ++ others) r ->
-         tf ([nm = t] ++ others) t)
-    : $(map (tf r) r) =
+         folder others -> Eq.t ([nm = t] ++ others) r
+         -> tf t)
+    : $(map tf r) =
     (@fold [fn done :: {K} =>
-               todo :: {K} -> [done ~ todo] => folder todo
-               -> Eq.t (done ++ todo) r
+               todo :: {K} -> [done ~ todo] =>
+               folder todo -> Eq.t (done ++ todo) r
                -> {Fl_done : folder done,
-                   MapF : $(map (tf (done ++ todo)) done)}]
+                   MapF : $(map tf done)}]
            (fn [nm :: Name] [t :: K] [done :: {K}] [[nm] ~ done]
-               (acc : todo :: {K} -> [done ~ todo] => folder todo
-                      -> Eq.t (done ++ todo) r
+               (acc : todo :: {K} -> [done ~ todo] =>
+                      folder todo -> Eq.t (done ++ todo) r
                       -> {Fl_done : folder done,
-                          MapF : $(map (tf (done ++ todo)) done)})
+                          MapF : $(map tf done)})
                [todo :: {K}] [done ++ [nm = t] ~ todo] (fl_todo : folder todo)
                (pf : Eq.t (done ++ [nm = t] ++ todo) r) =>
                let
@@ -107,25 +107,25 @@ fun mapNm0
 
 fun mapNm
         [K]
-        [tf1 :: K -> Type] [tf2 :: {K} -> K -> Type]
+        [tf1 :: K -> Type] [tf2 :: K -> Type]
         [r ::: {K}] (fl : folder r)
         (f : others :: {K} -> nm :: Name -> t ::: K  ->[[nm] ~ others] =>
          folder others -> Eq.t ([nm = t] ++ others) r ->
          tf1 t
-         -> tf2 ([nm = t] ++ others) t)
+         -> tf2 t)
     : $(map tf1 r)
-      -> $(map (tf2 r) r) =
+      -> $(map tf2 r) =
     (@fold [fn done :: {K} =>
                todo :: {K} -> [done ~ todo] => folder todo
                -> Eq.t (done ++ todo) r
                -> {Fl_done : folder done,
-                   MapF : $(map tf1 done) -> $(map (tf2 (done ++ todo)) done)}]
+                   MapF : $(map tf1 done) -> $(map tf2 done)}]
            (fn [nm :: Name] [t :: K] [done :: {K}] [[nm] ~ done]
                (acc : todo :: {K} -> [done ~ todo] => folder todo
                       -> Eq.t (done ++ todo) r
                       -> {Fl_done : folder done,
                           MapF : $(map tf1 done)
-                                 -> $(map (tf2 (done ++ todo)) done)})
+                                 -> $(map tf2 done)})
                [todo :: {K}] [done ++ [nm = t] ~ todo] (fl_todo : folder todo)
                (pf : Eq.t (done ++ [nm = t] ++ todo) r) =>
                let
@@ -188,10 +188,10 @@ fun choice
         (f : a -> b)
     : variant ([nm = a] ++ ts) -> variant ([nm = b] ++ ts) =
     @@cases [[nm = a] ++ ts] [_]
-            ((@mapNm0 [fn r t => t -> variant r]
+            ((@mapNm0 [fn t => t -> variant ([nm = b] ++ ts)]
                       (@Folder.cons [nm] [b] ! fl)
-                      (fn [others ::_] [nm' ::_] [t] [[nm'] ~ others] _ _ =>
-                          make [nm']))
+                      (fn [others ::_] [nm' ::_] [t] [[nm'] ~ others] _ pf =>
+                          Eq.make [nm'] pf))
              -- nm ++ {nm = fn x => make [nm] (f x)})
 
 fun compose [f] [g] (mpf : t f) (mpg : t g) [a] [b] = Top.compose mpf mpg
@@ -208,9 +208,9 @@ fun casesFunctor
         [r ::: {Type}] (fl : folder r)
         [f ::: Type -> Type] (_ : Functor.t f) =
     @@cases [map f r] [f (variant r)]
-            (@mapNm0 [fn r t => f t -> f (variant r)] fl
-                     (fn [others ::_] [nm ::_] [t] [[nm] ~ others ] _ _ =>
-                         Functor.mp (make [nm])))
+            (@mapNm0 [fn t => f t -> f (variant r)] fl
+                     (fn [others ::_] [nm ::_] [t] [[nm] ~ others ] _ pf =>
+                         Functor.mp (Eq.make [nm] pf)))
 
 fun casesMap
         [K]
@@ -221,11 +221,10 @@ fun casesMap
       -> variant (map tf2 r) =
     @@cases [map tf1 r] [_]
             (@mapNm [fn t => tf1 t -> tf2 t]
-                    [fn r t => tf1 t -> variant (map tf2 r)]
+                    [fn t => tf1 t -> variant (map tf2 r)]
                     fl
-                    (fn [others ::_] [nm ::_] [t]
-                        [[nm] ~ others] _ _ =>
-                        compose (make [nm]))
+                    (fn [others ::_] [nm ::_] [t] [[nm] ~ others] _ pf =>
+                        compose (Eq.makeMap [nm] [tf2] pf))
                     fs)
 
 fun casesMapU
@@ -247,11 +246,11 @@ fun casesTraverse
     : variant (map tf1 r) -> f (variant (map tf2 r)) =
     @@cases [map tf1 r] [_]
             (@mapNm [fn t => tf1 t -> f (tf2 t)]
-                    [fn r t => tf1 t -> f (variant (map tf2 r))]
+                    [fn t => tf1 t -> f (variant (map tf2 r))]
                     fl
                     (fn [others ::_] [nm ::_] [t]
-                        [[nm] ~ others] _ _ =>
-                        compose (Functor.mp (make [nm])))
+                        [[nm] ~ others] _ pf =>
+                        compose (Functor.mp (Eq.makeMap [nm] [tf2] pf)))
                     fs)
 
 fun casesDiagTraverse
@@ -264,27 +263,36 @@ fun casesDiagTraverse
       variant (map tf2 r)
       -> f (option (variant (map tf3 r))) =
     let
-        fun nones [others] [nm] [t]
-                  [[nm] ~ others] (fl_others : folder others) =
+        fun nones
+                [others] [nm] [t]
+                [[nm] ~ others] (fl_others : folder others) =
             @map0 [fn u =>
                       tf2 u ->
                       f (option (variant (map tf3 ([nm = t] ++ others))))]
                   (fn [u ::_] _ => return None)
                   fl_others
+        fun innerCases
+                [others ::_] [nm ::_] [t]
+                [[nm] ~ others]
+                fl_others (pf : Eq.t _ _)
+                (f : tf1 t -> tf2 t -> f (tf3 t)) (x : tf1 t) =
+            Eq.cast pf
+                    [fn r =>
+                        variant (map tf2 r)
+                        -> f (option (variant (map tf3 r)))]
+                    (cases (@nones ! fl_others
+                             ++ {nm =
+                                  fn (y : tf2 t) =>
+                                     Monad.mp (Some <<< make [nm]) (f x y)}))
     in
         @@cases [map tf1 r] [_]
                 (@mapNm [fn t => tf1 t -> tf2 t -> f (tf3 t)]
-                        [fn r t =>
-                            tf1 t -> variant (map tf2 r)
+                        [fn t =>
+                            tf1 t ->
+                            variant (map tf2 r)
                             -> f (option (variant (map tf3 r)))]
                         fl
-                        (fn [others ::_] [nm ::_] [t]
-                            [[nm] ~ others] fl_others _
-                            (f : tf1 t -> tf2 t -> f (tf3 t)) (x : tf1 t) =>
-                            cases (@nones ! fl_others
-                                   ++ {nm = fn (y : tf2 t) =>
-                                               z <- f x y;
-                                               return (Some (make [nm] z))}))
+                        @@innerCases
                         fs)
     end
 

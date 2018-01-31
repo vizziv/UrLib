@@ -13,3 +13,25 @@ val cast :
     t a b -> tf :: (K -> Type) ->
     tf a
     -> tf b
+
+val mp :
+    K1 --> K2 -->
+    a ::: K1 -> b ::: K1 -> tf :: (K1 -> K2) ->
+    t a b
+    -> t (tf a) (tf b)
+
+val make :
+    nm :: Name -> a ::: Type -> others ::: {Type} -> r ::: {Type} ->
+    [[nm] ~ others] =>
+    t ([nm = a] ++ others) r ->
+    a
+    -> variant r
+
+val makeMap :
+    K -->
+    nm :: Name -> a ::: K -> others ::: {K} -> r ::: {K} ->
+    [[nm] ~ others] =>
+    tf :: (K -> Type) ->
+    t ([nm = a] ++ others) r ->
+    tf a
+    -> variant (map tf r)
