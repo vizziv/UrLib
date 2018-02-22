@@ -15,7 +15,7 @@ structure P = Pulse.Make(struct
 end)
 
 val newUser =
-    p <- Pulse.beat;
+    p <- Pulse.get;
     {User = u} <- Sql.insertRandKeys users {Pulse = p};
     return u
 
@@ -27,7 +27,7 @@ fun verify uq =
         case pq of
             None => newUser
           | Some p =>
-            P.ping (p ++ {User = u});
+            P.beat (p ++ {User = u});
             return u
 
 val get =
