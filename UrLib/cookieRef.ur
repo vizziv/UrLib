@@ -1,11 +1,11 @@
 open Prelude
 
 signature Input = sig
-    con fields :: {Type}
-    con ref :: Name
+    con key :: Name
     con pulse :: Name
-    constraint [ref] ~ [pulse]
-    constraint [ref] ~ fields
+    con fields :: {Type}
+    constraint [key] ~ [pulse]
+    constraint [key] ~ fields
     constraint [pulse] ~ fields
     val fl : folder fields
     val sql : $(map sql_injectable fields)
@@ -15,13 +15,13 @@ functor Make(M : Input) = struct
 
 open M
 
-cookie ref : int
+cookie key : int
 
-table refs : ([ref = int, pulse = Pulse.t] ++ fields)
-    PRIMARY KEY {ref}
+table refs : ([key = int, pulse = Pulse.t] ++ fields)
+    PRIMARY KEY {key}
 
 structure P = Pulse.Make(struct
-    con keys = [ref = int]
+    con keys = [key = int]
     con pulse = pulse
     val tab = refs
     val seconds_refresh = 3600
@@ -32,30 +32,30 @@ val fl = @Folder.cons [pulse] [_] ! fl
 
 val sql = sql ++ {pulse = _}
 
-fun setRef r =
+fun setKey k =
     t <- now;
-    setCookie ref
-              {Value = r.ref,
+    setCookie key
+              {Value = k.key,
                Expires = Some (addSeconds t 3600),
                Secure = True}
 
-val getRef =
-    Monad.mp (Monad.mp (Record.inj [ref])) (getCookie ref)
+val getKey =
+    Monad.mp (Monad.mp (Record.inj [key])) (getCookie key)
 
 fun set xs =
     p <- Pulse.get;
-    bind (@Sql.insertRandKeys ! _ fl sql refs (xs ++ {pulse = p})) setRef
+    bind (@Sql.insertRandKeys ! _ fl sql refs (xs ++ {pulse = p})) setKey
 
 val get =
-    rq <- getRef;
-    case rq of
+    kq <- getKey;
+    case kq of
         None => return None
-      | Some r =>
-        xsq <- P.lookup r;
+      | Some k =>
+        xsq <- P.lookup k;
         case xsq of
             None => return None
           | Some xs =>
-            setRef r;
+            setKey k;
             return (Some xs)
 
 end

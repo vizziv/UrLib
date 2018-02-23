@@ -1,11 +1,11 @@
 include Prelude.Types
 
 signature Input = sig
-    con fields :: {Type}
-    con ref :: Name
+    con key :: Name
     con pulse :: Name
-    constraint [ref] ~ [pulse]
-    constraint [ref] ~ fields
+    con fields :: {Type}
+    constraint [key] ~ [pulse]
+    constraint [key] ~ fields
     constraint [pulse] ~ fields
     val fl : folder fields
     val sql : $(map sql_injectable fields)
