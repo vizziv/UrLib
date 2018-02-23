@@ -104,18 +104,20 @@ val deleteLookup :
     -> transaction unit
 
 val insertRandKeys :
-    keys ::: {Unit} -> vals ::: {Type} -> uniques ::: {{Unit}} ->
-    [keys ~ vals] =>
+    keys ::: {Unit} -> vals ::: {Type} ->
+    nm ::: Name -> uniques ::: {{Unit}} ->
+    [keys ~ vals] => [[nm] ~ uniques] =>
     folder keys -> folder vals -> $(map sql_injectable vals) ->
-    sql_table (mapU int keys ++ vals) uniques ->
+    sql_table (mapU int keys ++ vals) ([nm = keys] ++ uniques) ->
     $vals
     -> transaction $(mapU int keys)
 
 val updateRandKeys :
-    keys ::: {Unit} -> vals ::: {Type} -> uniques ::: {{Unit}} ->
-    [keys ~ vals] =>
+    keys ::: {Unit} -> vals ::: {Type} ->
+    nm ::: Name -> uniques ::: {{Unit}} ->
+    [keys ~ vals] => [[nm] ~ uniques] =>
     folder keys ->
-    sql_table (mapU int keys ++ vals) uniques ->
+    sql_table (mapU int keys ++ vals) ([nm = keys] ++ uniques) ->
     $(mapU int keys)
     -> transaction $(mapU int keys)
 

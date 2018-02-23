@@ -44,7 +44,7 @@ val getKey =
 
 fun set xs =
     p <- Pulse.get;
-    bind (@Sql.insertRandKeys ! _ fl sql refs (xs ++ {pulse = p})) setKey
+    bind (@Sql.insertRandKeys ! ! _ fl sql refs (xs ++ {pulse = p})) setKey
 
 val get =
     kq <- getKey;

@@ -121,13 +121,13 @@ fun deleteLookup
         (tab : sql_table (keys ++ others) uniques) (ks : $keys) =
     delete tab (@lookup ! ! fl sql ks)
 
-(* The tuple of keys is guaranteed to be unique. *)
 fun insertRandKeys
-        [keys ::: {Unit}] [vals ::: {Type}] [uniques ::: {{Unit}}]
-        [keys ~ vals]
+        [keys ::: {Unit}] [vals ::: {Type}]
+        [nm ::: Name] [uniques ::: {{Unit}}]
+        [keys ~ vals] [[nm] ~ uniques]
         (fl_keys : folder keys) (fl_vals : folder vals)
         (sql_vals : $(map sql_injectable vals))
-        (tab : sql_table (mapU int keys ++ vals) uniques) (xs : $vals)
+        (tab : sql_table (mapU int keys ++ vals) ([nm = keys] ++ uniques)) (xs : $vals)
     : transaction $(mapU int keys) =
     let
         val sql_keys =
@@ -148,10 +148,11 @@ fun insertRandKeys
     end
 
 fun updateRandKeys
-        [keys ::: {Unit}] [others ::: {Type}] [uniques ::: {{Unit}}]
-        [keys ~ others]
+        [keys ::: {Unit}] [others ::: {Type}]
+        [nm ::: Name] [uniques ::: {{Unit}}]
+        [keys ~ others] [[nm] ~ uniques]
         (fl : folder keys)
-        (tab : sql_table (mapU int keys ++ others) uniques)
+        (tab : sql_table (mapU int keys ++ others) ([nm = keys] ++ uniques))
         (ksOld : $(mapU int keys))
     : transaction $(mapU int keys) =
     let
@@ -161,7 +162,7 @@ fun updateRandKeys
             ksNew <- @Monad.mapR0 _ [fn _ => int]
                                   (fn [nm ::_] [t ::_] => rand)
                                   fl;
-            errq <- tryDml (@@Basis.update [others] [uniques] [mapU int keys] !
+            errq <- tryDml (@@Basis.update [others] [_] [mapU int keys] !
                                            (@sqlInjectRow fl sql ksNew)
                                            tab
                                            (@lookup ! ! fl sql ksOld));
