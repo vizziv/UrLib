@@ -3,6 +3,8 @@ $/option
 $/monad
 eq
 prelude
+random
+newtype
 mappable
 cases
 record
