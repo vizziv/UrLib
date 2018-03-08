@@ -10,6 +10,7 @@ cases
 record
 subset
 str
+randomKey
 sql
 pulse
 cookieRef

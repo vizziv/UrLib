@@ -1,14 +1,4 @@
-structure User = Newtype.Make(struct
-    open Newtype
-    type t = int
-    con interface = sqlp ++ random
-    val t = {Sqlp = _, Rng = _}
-end)
-
-type t = User.t
-
-val sqlp = User.t.Sqlp
-val _ = User.t.Rng
+type t = RandomKey.t
 
 cookie user : t
 

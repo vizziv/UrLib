@@ -165,10 +165,10 @@ fun updateRandKeys
                                  (fn [nm ::_] [t ::_] => @Random.gen)
                                  fl
                                  rng;
-            errq <- tryDml (@@Basis.update [others] [_] [keys] !
-                                           (@sqlInjectRow fl sql ksNew)
-                                           tab
-                                           (@lookup ! ! fl sql ksOld));
+            errq <- tryDml (Basis.update [keys]
+                                         (@sqlInjectRow fl sql ksNew)
+                                         tab
+                                         (@lookup ! ! fl sql ksOld));
             case errq of
                 None => return ksNew
               | Some _ => go ()
