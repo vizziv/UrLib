@@ -30,9 +30,9 @@ fun roleOf roles i =
 fun countBit f : list {Response : bool, Member : member} -> int =
     List.foldl (fn resp acc => acc + bit (f resp.Response)) 0
 
-val countSuccess = countBit id
+val countSuccess = countBit identity
 val countFail = countBit not
-val countApprove = countBit id
+val countApprove = countBit identity
 
 val spies =
     mapiPartial (fn i role =>

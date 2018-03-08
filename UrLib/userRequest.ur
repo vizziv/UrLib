@@ -63,8 +63,9 @@ fun connect user : transaction connection =
     chan <- channel;
     key <- rand;
     let
-        val row = {Key = key, Channel = chan, Instance = None, Response = None}
-                  ++ user
+        val row =
+            {Key = key, Channel = chan, Instance = None, Response = None}
+            ++ user
     in
         Sql.insert users row;
         src <- source None;
@@ -72,16 +73,16 @@ fun connect user : transaction connection =
     end
 
 fun instantiate [tf] job variant =
-    {Instance = Some (serialize (@casesMapU [tf] [fn _ => int] fl_handlers
-                                            (fn [t] _ => job) variant))}
+    {Instance = Some (serialize (@Cases.mapU [tf] [fn _ => int] fl_handlers
+                                             (fn [t] _ => job) variant))}
 
 fun ask group (requests : requests) =
     let
         val reqs =
-            @casesFunctor (@Folder.mp fl_handlers)
-                          (@Functor.compose Functor.list
-                                            (Functor.field [#Request]))
-                          requests
+            @Cases.mappable (@Folder.mp fl_handlers)
+                            (@Mappable.compose Mappable.list
+                                               (Mappable.field [#Request]))
+                            requests
         val members = List.mp (Record.proj [#Member]) reqs
         val cond = (SQL T.Group = {[group]}
                     AND {Sql.lookups (List.mp (Record.inj [#Member]) members)})
@@ -120,16 +121,16 @@ fun handle user job resp =
                                         else
                                             respzq);
                               acc <- accq;
-                              (@casesDiagU [snd] [respList] [respList]
-                                           fl_handlers
-                                           (fn [t] resp acc =>
-                                               ({Member = member,
-                                                 Response = resp})
-                                               :: acc)
-                                           (deserialize respz) acc))
-                          (Some (@casesMapU [snd] [respList] fl_handlers
-                                            (fn [t] _ => [])
-                                            resp));
+                              (@Cases.diagU [snd] [respList] [respList]
+                                            fl_handlers
+                                            (fn [t] resp acc =>
+                                                ({Member = member,
+                                                  Response = resp})
+                                                :: acc)
+                                            (deserialize respz) acc))
+                          (Some (@Cases.mapU [snd] [respList] fl_handlers
+                                             (fn [t] _ => [])
+                                             resp));
         case respsq of
             None =>
             Sql.updateLookup users

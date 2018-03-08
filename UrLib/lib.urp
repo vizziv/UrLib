@@ -3,6 +3,8 @@ $/option
 $/monad
 eq
 prelude
+mappable
+cases
 record
 subset
 str

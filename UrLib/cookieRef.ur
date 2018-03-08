@@ -50,12 +50,6 @@ val get =
     kq <- getKey;
     case kq of
         None => return None
-      | Some k =>
-        xsq <- P.lookup k;
-        case xsq of
-            None => return None
-          | Some xs =>
-            setKey k;
-            return (Some xs)
+      | Some k => setKey k; P.lookup k
 
 end

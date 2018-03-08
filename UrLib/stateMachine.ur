@@ -30,7 +30,7 @@ table sms : {Label : label, State : serialized state} PRIMARY KEY Label
 
 fun next label (x : state) (y : effect) =
     statevq
-    <- @casesDiagTraverse [fst] [snd] [fn _ => _]
+    <- @Cases.diagTraverse [fst] [snd] [fn _ => _]
                           fl_states transaction_monad
                           (@mp [fn s => {State : s.1, Effect : s.2}
                                         -> transaction state]
@@ -42,7 +42,7 @@ fun next label (x : state) (y : effect) =
                           x y;
     case statevq of
         None => return None
-      | Some statev => return (Some (@casesGet fl_states statev))
+      | Some statev => return (Some (@Cases.get fl_states statev))
 
 fun init {Label = label, State = state} =
     Sql.insert sms {Label = label, State = serialize state};
