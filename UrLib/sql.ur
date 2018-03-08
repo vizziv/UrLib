@@ -1,12 +1,12 @@
 open Prelude
 
-datatype setResult = Inserted | Updated
+datatype insertResult = Inserted | NotInserted
 
-val eq_setResult : eq setResult =
+val eq_insertResult : eq insertResult =
     mkEq (fn u v =>
              case (u, v) of
                  (Inserted, Inserted) => True
-               | (Updated, Updated) => True
+               | (NotInserted, NotInserted) => True
                | _ => False)
 
 (* Only works on Postgres! *)
@@ -18,7 +18,7 @@ fun tryUnique dml =
         if String.isPrefix {Full = err,
                             Prefix = "ERROR:  duplicate key value"} then
             (* Here this means "not inserted" rather than "updated". *)
-            return Updated
+            return NotInserted
         else
             impossible (_LOC_ ^ ": " ^ err)
 
@@ -60,7 +60,12 @@ fun select
 fun count
         [fields ::: {Type}] [tabl] (_ : fieldsOf tabl fields)
         (tab : tabl) (cond : sql_exp [T = fields] [] [] bool) =
-    (SELECT COUNT( * ) AS C FROM tab AS T WHERE {cond})
+    oneRowE1 (SELECT COUNT( * ) AS Count FROM tab AS T WHERE {cond})
+
+fun exists
+        [fields ::: {Type}] [tabl] (_ : fieldsOf tabl fields)
+        (tab : tabl) (cond : sql_exp [T = fields] [] [] bool) =
+    hasRows (SELECT TRUE FROM tab AS T WHERE {cond} LIMIT 1)
 
 con lookupAcc
         (tabs :: {{Type}}) (agg :: {{Type}}) (exps :: {Type})
@@ -117,13 +122,12 @@ fun countLookup
         (tab : tabl) (ks : $keys) =
     @@count [keys ++ others] [_] _ tab (@lookup ! ! fl sql ks)
 
-fun selectLookups
-        [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
-        [keys ~ vals] [keys ~ others] [vals ~ others]
+fun existsLookup
+        [keys ::: {Type}] [others ::: {Type}] [keys ~ others]
         (fl : folder keys) (sql : $(map sql_injectable keys))
-        [tabl] (_ : fieldsOf tabl (keys ++ vals ++ others))
-        (tab : tabl) (kss : list $keys) =
-    @@select [vals] [keys ++ others] ! [_] _ tab (@lookups ! ! fl sql kss)
+        [tabl] (_ : fieldsOf tabl (keys ++ others))
+        (tab : tabl) (ks : $keys) =
+    @@exists [keys ++ others] [_] _ tab (@lookup ! ! fl sql ks)
 
 fun updateLookup
         [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
@@ -136,7 +140,7 @@ fun updateLookup
     @@update [keys ++ others] [uniques] [vals] ! fl_vals sql_vals
              tab (@lookup ! ! fl_keys sql_keys ks) xs
 
-fun setLookup
+fun insertLookup
         [keys ::: {Type}] [vals ::: {Type}]
         [nm ::: Name] [uniques ::: {{Unit}}]
         [keys ~ vals] [[nm] ~ uniques]
@@ -148,12 +152,21 @@ fun setLookup
         val fl = @Folder.concat ! fl_keys fl_vals
         val sql = sql_keys ++ sql_vals
     in
-        r <- tryUnique (Basis.insert tab (@sqlInjectRow fl sql (ks ++ xs)));
-        when (r = Updated) (@updateLookup ! ! !
-                                          fl_keys sql_keys fl_vals sql_vals
-                                          tab ks xs);
-        return r
+        tryUnique (Basis.insert tab (@sqlInjectRow fl sql (ks ++ xs)))
     end
+
+fun setLookup
+        [keys ::: {Type}] [vals ::: {Type}]
+        [nm ::: Name] [uniques ::: {{Unit}}]
+        [keys ~ vals] [[nm] ~ uniques]
+        (fl_keys : folder keys) (sql_keys : $(map sql_injectable keys))
+        (fl_vals : folder vals) (sql_vals : $(map sql_injectable vals))
+        (tab : sql_table (keys ++ vals) ([nm = map forget keys] ++ uniques))
+        (ks : $keys) (xs : $vals) =
+    r <- @insertLookup ! ! fl_keys sql_keys fl_vals sql_vals tab ks xs;
+    when (r = NotInserted)
+         (@updateLookup ! ! ! fl_keys sql_keys fl_vals sql_vals tab ks xs);
+    return r
 
 fun deleteLookup
         [keys ::: {Type}] [others ::: {Type}] [uniques ::: {{Unit}}]
@@ -184,7 +197,7 @@ fun insertRandKeys
                                          (@sqlInjectRow fl sql (ks ++ xs)));
             case r of
                 Inserted => return ks
-              | Updated => go ()
+              | NotInserted => go ()
     in
         go ()
     end
@@ -210,7 +223,7 @@ fun updateRandKeys
                                          (@lookup ! ! fl sql ksOld));
             case r of
                 Inserted => return ksNew
-              | Updated => go ()
+              | NotInserted => go ()
     in
         go ()
     end

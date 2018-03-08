@@ -18,33 +18,37 @@ functor Make(M : sig type a end) = struct
     table connections : {User : User.t, Connection : connection a}
         PRIMARY KEY User
 
-    table messages :
-          {Key : RandomKey.t,
-           User : User.t,
-           Message : serialized a,
-           When : time}
-        PRIMARY KEY Key
+    table holding :
+        {User : User.t,
+         Message : serialized a,
+         When : time}
+
+    table sending :
+        {User : User.t,
+         Message : serialized a,
+         Key : RandomKey.t}
+        PRIMARY KEY User
+        CONSTRAINT UNIQUE Key
 
     val getUser = Record.inj [#User] <<< User.get
 
     val connect =
         u <- getUser;
-        rowq <- Sql.selectLookup connections u;
         cxn <- channel;
-        Sql.insertLookup connections (u ++ {Connection = Some cxn});
-        case rowq of
-            None =>
-            return cxn
-          | Some _ => return cxn
+        _ <- Sql.setLookup connections (u ++ {Connection = cxn});
+        return cxn
 
     fun send x =
         u <- getUser;
-        rowq <- Sql.selectLookup users u;
-        case rowq of
-            None =>
-            n <- now;
-            Sql.insertRandKeys messages
-                               (u ++ {Message = serialize x, When = n})
-          | Some {Connection = cxn} => Basis.send cxn msg
+        n <- now;
+         <- Monad.mp (fn x => x > 0) Sql.countLookup sending 
+        Sql.insertRandKeys messages
+                           (u ++ {Message = serialize x, When = n})
+        queryI1 (Sql.lookup users u)
+                ()
+
+    fun ack msg
+
+    val t = {Send = send, Connect = connect}
 
 end
