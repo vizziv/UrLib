@@ -2,7 +2,7 @@ open Prelude
 
 fun get [K] [r ::: {K}] (fl : folder r) [t ::: Type] =
     @@cases [map (fn _ => t) r] [t]
-            (@map0 [fn _ => t -> t] (fn [ignore ::_] => identity) fl)
+            (@map0 [fn _ => t -> t] (fn [ignore ::_] => ident) fl)
 
 fun mappable
         [r ::: {Type}] (fl : folder r)
@@ -104,7 +104,7 @@ fun diag
       variant (map tf1 r) ->
       variant (map tf2 r)
       -> option (variant (map tf3 r)) =
-    @@diagTraverse [tf1] [tf2] [tf3] [r] fl [fn t => t] monad_identity
+    @@diagTraverse [tf1] [tf2] [tf3] [r] fl [fn t => t] monad_ident
 
 fun diagU
         [K]

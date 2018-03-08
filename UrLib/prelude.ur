@@ -11,7 +11,7 @@ structure T : Types = struct end
 
 open T
 
-fun identity [t] (x : t) = x
+fun ident [t] (x : t) = x
 
 fun const [a] [b] (x : a) _ = x
 
@@ -26,8 +26,8 @@ fun zip [a] [b] [c] (f : a -> b -> c) (xs : list a) (ys : list b) : list c =
 fun impossible [t] loc : t =
     error <xml>The allegedly impossible has occurred at {[loc]}.</xml>
 
-val monad_identity =
-    mkMonad {Return = @@identity,
+val monad_ident =
+    mkMonad {Return = @@ident,
              Bind = fn [t1] [t2] (x : t1) (f : t1 -> t2) => f x}
 
 fun bit b = if b then 1 else 0

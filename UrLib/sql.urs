@@ -1,3 +1,5 @@
+include Prelude.Types
+
 val sqlInjectRow :
     tables ::: {{Type}} -> agg ::: {{Type}} -> exps ::: {Type} ->
     fields ::: {Type} ->
@@ -104,22 +106,23 @@ val deleteLookup :
     -> transaction unit
 
 val insertRandKeys :
-    keys ::: {Unit} -> vals ::: {Type} ->
+    keys ::: {Type} -> vals ::: {Type} ->
     nm ::: Name -> uniques ::: {{Unit}} ->
     [keys ~ vals] => [[nm] ~ uniques] =>
-    folder keys -> folder vals -> $(map sql_injectable vals) ->
-    sql_table (mapU int keys ++ vals) ([nm = keys] ++ uniques) ->
+    folder keys -> $(map Random.t keys) -> $(map sql_injectable keys) ->
+    folder vals -> $(map sql_injectable vals) ->
+    sql_table (keys ++ vals) ([nm = map forget keys] ++ uniques) ->
     $vals
-    -> transaction $(mapU int keys)
+    -> transaction $keys
 
 val updateRandKeys :
-    keys ::: {Unit} -> vals ::: {Type} ->
+    keys ::: {Type} -> vals ::: {Type} ->
     nm ::: Name -> uniques ::: {{Unit}} ->
     [keys ~ vals] => [[nm] ~ uniques] =>
-    folder keys ->
-    sql_table (mapU int keys ++ vals) ([nm = keys] ++ uniques) ->
-    $(mapU int keys)
-    -> transaction $(mapU int keys)
+    folder keys -> $(map Random.t keys) -> $(map sql_injectable keys) ->
+    sql_table (keys ++ vals) ([nm = map forget keys] ++ uniques) ->
+    $keys
+    -> transaction $keys
 
 val compat :
     tabs ::: {{Type}} -> agg ::: {{Type}} -> exps ::: {Type} ->

@@ -9,7 +9,7 @@ end
 
 include Types
 
-val identity : t ::: Type -> t -> t
+val ident : t ::: Type -> t -> t
 
 val const : a ::: Type -> b ::: Type -> a -> b -> a
 
@@ -29,7 +29,7 @@ val contradiction : t ::: Type -> void -> t
 (* For promising, without proof, that a branch cannot be taken. *)
 val impossible : t ::: Type -> string -> t
 
-val monad_identity : monad (fn t => t)
+val monad_ident : monad (fn t => t)
 
 val bit : bool -> int
 

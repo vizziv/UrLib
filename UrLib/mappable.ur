@@ -2,9 +2,9 @@ open Prelude
 
 con t (f :: Type -> Type) = a ::: Type -> b ::: Type -> (a -> b) -> f a -> f b
 
-val mk = fn [f] => identity
+val mk = fn [f] => ident
 
-val mp = fn [f] => identity
+val mp = fn [f] => ident
 
 val monad = @@Monad.mp
 

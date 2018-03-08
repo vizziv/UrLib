@@ -15,13 +15,23 @@ functor Make(M : Input) = struct
 
 open M
 
-cookie key : int
+structure Key = Newtype.Make(struct
+    open Newtype
+    type t = int
+    con interface = sqlp ++ random
+    val t = {Sqlp = _, Rng = _}
+end)
 
-table refs : ([key = int, pulse = Pulse.t] ++ vals)
+val _ = Key.t.Sqlp
+val _ = Key.t.Rng
+
+cookie key : Key.t
+
+table refs : ([key = Key.t, pulse = Pulse.t] ++ vals)
     PRIMARY KEY {key}
 
 structure P = Pulse.Make(struct
-    con keys = [key = int]
+    con keys = [key = Key.t]
     con pulse = pulse
     val tab = refs
     val seconds_refresh = 3600
@@ -39,12 +49,12 @@ fun setKey k =
                Expires = Some (addSeconds n 3600),
                Secure = True}
 
-val getKey : transaction (option {key : int}) =
+val getKey : transaction (option {key : Key.t}) =
     @Mappable.mp Mappable.compose (Record.inj [key]) (getCookie key)
 
 fun set xs =
     p <- Pulse.get;
-    bind (@Sql.insertRandKeys ! ! _ fl sql refs (xs ++ {pulse = p})) setKey
+    bind (@Sql.insertRandKeys ! ! _ _ _ fl sql refs (xs ++ {pulse = p})) setKey
 
 val get =
     kq <- getKey;

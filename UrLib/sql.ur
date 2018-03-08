@@ -1,3 +1,5 @@
+open Prelude
+
 fun sqlInjectRow
         [tables ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
         [fields ::: {Type}]
@@ -122,24 +124,25 @@ fun deleteLookup
     delete tab (@lookup ! ! fl sql ks)
 
 fun insertRandKeys
-        [keys ::: {Unit}] [vals ::: {Type}]
+        [keys ::: {Type}] [vals ::: {Type}]
         [nm ::: Name] [uniques ::: {{Unit}}]
         [keys ~ vals] [[nm] ~ uniques]
-        (fl_keys : folder keys) (fl_vals : folder vals)
-        (sql_vals : $(map sql_injectable vals))
-        (tab : sql_table (mapU int keys ++ vals) ([nm = keys] ++ uniques)) (xs : $vals)
-    : transaction $(mapU int keys) =
+        (fl_keys : folder keys) (rng_keys : $(map Random.t keys))
+        (sql_keys : $(map sql_injectable keys))
+        (fl_vals : folder vals) (sql_vals : $(map sql_injectable vals))
+        (tab : sql_table (keys ++ vals) ([nm = map forget keys] ++ uniques))
+        (xs : $vals)
+    : transaction $keys =
     let
-        val sql_keys =
-            @map0 [fn _ => sql_injectable int] (fn [t ::_] => _) fl_keys
-        val fl_keys : folder (mapU int keys) = @Folder.mp fl_keys
         val sql = sql_keys ++ sql_vals
         val fl = @Folder.concat ! fl_keys fl_vals
         fun go () =
-            ks <- @Monad.mapR0 _ [fn _ => int]
-                               (fn [nm ::_] [t ::_] => rand)
-                               fl_keys;
-            errq <- tryDml (Basis.insert tab (@sqlInjectRow fl sql (ks ++ xs)));
+            ks <- @Monad.mapR _ [Random.t] [ident]
+                              (fn [nm ::_] [t ::_] => @Random.gen)
+                              fl_keys
+                              rng_keys;
+            errq <- tryDml (Basis.insert tab
+                                         (@sqlInjectRow fl sql (ks ++ xs)));
             case errq of
                 None => return ks
               | Some _ => go ()
@@ -148,21 +151,21 @@ fun insertRandKeys
     end
 
 fun updateRandKeys
-        [keys ::: {Unit}] [others ::: {Type}]
+        [keys ::: {Type}] [others ::: {Type}]
         [nm ::: Name] [uniques ::: {{Unit}}]
         [keys ~ others] [[nm] ~ uniques]
-        (fl : folder keys)
-        (tab : sql_table (mapU int keys ++ others) ([nm = keys] ++ uniques))
-        (ksOld : $(mapU int keys))
-    : transaction $(mapU int keys) =
+        (fl : folder keys) (rng : $(map Random.t keys))
+        (sql : $(map sql_injectable keys))
+        (tab : sql_table (keys ++ others) ([nm = map forget keys] ++ uniques))
+        (ksOld : $keys)
+    : transaction $keys =
     let
-        val sql = @map0 [fn _ => sql_injectable int] (fn [t ::_] => _) fl
-        val fl : folder (mapU int keys) = @Folder.mp fl
         fun go () =
-            ksNew <- @Monad.mapR0 _ [fn _ => int]
-                                  (fn [nm ::_] [t ::_] => rand)
-                                  fl;
-            errq <- tryDml (@@Basis.update [others] [_] [mapU int keys] !
+            ksNew <- @Monad.mapR _ [Random.t] [ident]
+                                 (fn [nm ::_] [t ::_] => @Random.gen)
+                                 fl
+                                 rng;
+            errq <- tryDml (@@Basis.update [others] [_] [keys] !
                                            (@sqlInjectRow fl sql ksNew)
                                            tab
                                            (@lookup ! ! fl sql ksOld));
