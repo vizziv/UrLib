@@ -1,5 +1,27 @@
 open Prelude
 
+datatype setResult = Inserted | Updated
+
+val eq_setResult : eq setResult =
+    mkEq (fn u v =>
+             case (u, v) of
+                 (Inserted, Inserted) => True
+               | (Updated, Updated) => True
+               | _ => False)
+
+(* Only works on Postgres! *)
+fun tryUnique dml =
+    errq <- tryDml dml;
+    case errq of
+        None => return Inserted
+      | Some err =>
+        if String.isPrefix {Full = err,
+                            Prefix = "ERROR:  duplicate key value"} then
+            (* Here this means "not inserted" rather than "updated". *)
+            return Updated
+        else
+            impossible (_LOC_ ^ ": " ^ err)
+
 fun sqlInjectRow
         [tables ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
         [fields ::: {Type}]
@@ -104,17 +126,34 @@ fun selectLookups
     @@select [vals] [keys ++ others] ! [_] _ tab (@lookups ! ! fl sql kss)
 
 fun updateLookup
-        [unchanged ::: {Type}] [uniques ::: {{Unit}}]
-        [changed ::: {Type}] [changed ~ unchanged]
-        (fl_changed : folder changed)
-        (sql_changed : $(map sql_injectable changed))
-        [keys ::: {Type}] [keys ~ changed ++ unchanged]
-        (fl_keys : folder keys)
-        (sql_keys : $(map sql_injectable keys))
-        (tab : sql_table (keys ++ changed ++ unchanged) uniques)
-        (ks : $keys) (xs : $changed) =
-    @@update [keys ++ unchanged] [uniques] [changed] ! fl_changed sql_changed
+        [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
+        [uniques ::: {{Unit}}]
+        [keys ~ vals] [keys ~ others] [vals ~ others]
+        (fl_keys : folder keys) (sql_keys : $(map sql_injectable keys))
+        (fl_vals : folder vals) (sql_vals : $(map sql_injectable vals))
+        (tab : sql_table (keys ++ vals ++ others) uniques)
+        (ks : $keys) (xs : $vals) =
+    @@update [keys ++ others] [uniques] [vals] ! fl_vals sql_vals
              tab (@lookup ! ! fl_keys sql_keys ks) xs
+
+fun setLookup
+        [keys ::: {Type}] [vals ::: {Type}]
+        [nm ::: Name] [uniques ::: {{Unit}}]
+        [keys ~ vals] [[nm] ~ uniques]
+        (fl_keys : folder keys) (sql_keys : $(map sql_injectable keys))
+        (fl_vals : folder vals) (sql_vals : $(map sql_injectable vals))
+        (tab : sql_table (keys ++ vals) ([nm = map forget keys] ++ uniques))
+        (ks : $keys) (xs : $vals) =
+    let
+        val fl = @Folder.concat ! fl_keys fl_vals
+        val sql = sql_keys ++ sql_vals
+    in
+        r <- tryUnique (Basis.insert tab (@sqlInjectRow fl sql (ks ++ xs)));
+        when (r = Updated) (@updateLookup ! ! !
+                                          fl_keys sql_keys fl_vals sql_vals
+                                          tab ks xs);
+        return r
+    end
 
 fun deleteLookup
         [keys ::: {Type}] [others ::: {Type}] [uniques ::: {{Unit}}]
@@ -141,11 +180,11 @@ fun insertRandKeys
                               (fn [nm ::_] [t ::_] => @Random.gen)
                               fl_keys
                               rng_keys;
-            errq <- tryDml (Basis.insert tab
+            r <- tryUnique (Basis.insert tab
                                          (@sqlInjectRow fl sql (ks ++ xs)));
-            case errq of
-                None => return ks
-              | Some _ => go ()
+            case r of
+                Inserted => return ks
+              | Updated => go ()
     in
         go ()
     end
@@ -165,13 +204,13 @@ fun updateRandKeys
                                  (fn [nm ::_] [t ::_] => @Random.gen)
                                  fl
                                  rng;
-            errq <- tryDml (Basis.update [keys]
+            r <- tryUnique (Basis.update [keys]
                                          (@sqlInjectRow fl sql ksNew)
                                          tab
                                          (@lookup ! ! fl sql ksOld));
-            case errq of
-                None => return ksNew
-              | Some _ => go ()
+            case r of
+                Inserted => return ksNew
+              | Updated => go ()
     in
         go ()
     end

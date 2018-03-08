@@ -1,6 +1,7 @@
 $/list
 $/option
 $/monad
+$/string
 eq
 prelude
 random

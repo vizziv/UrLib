@@ -86,15 +86,32 @@ val countLookup :
     $keys
     -> sql_query [] [] [] [C = int]
 
-val updateLookup :
-    unchanged ::: {Type} -> uniques ::: {{Unit}} ->
-    changed ::: {Type} -> [changed ~ unchanged] =>
-    folder changed -> $(map sql_injectable changed) ->
-    keys ::: {Type} -> [keys ~ changed ++ unchanged] =>
+datatype setResult = Inserted | Updated
+
+val eq_setResult : eq setResult
+
+(* Updates the value if one with the same key already exists. *)
+(* Only works on Postgres! *)
+val setLookup :
+    keys ::: {Type} -> vals ::: {Type} ->
+    nm ::: Name -> uniques ::: {{Unit}} ->
+    [keys ~ vals] => [[nm] ~ uniques] =>
     folder keys -> $(map sql_injectable keys) ->
-    sql_table (keys ++ changed ++ unchanged) uniques ->
+    folder vals -> $(map sql_injectable vals) ->
+    sql_table (keys ++ vals) ([nm = map forget keys] ++ uniques) ->
     $keys ->
-    $changed
+    $vals
+    -> transaction setResult
+
+val updateLookup :
+    keys ::: {Type} -> vals ::: {Type} -> others ::: {Type} ->
+    uniques ::: {{Unit}} ->
+    [keys ~ vals] => [keys ~ others] => [vals ~ others] =>
+    folder keys -> $(map sql_injectable keys) ->
+    folder vals -> $(map sql_injectable vals) ->
+    sql_table (keys ++ vals ++ others) uniques ->
+    $keys ->
+    $vals
     -> tunit
 
 val deleteLookup :
@@ -105,6 +122,7 @@ val deleteLookup :
     $keys
     -> tunit
 
+(* Only works on Postgres! *)
 val insertRandKeys :
     keys ::: {Type} -> vals ::: {Type} ->
     nm ::: Name -> uniques ::: {{Unit}} ->
@@ -115,6 +133,7 @@ val insertRandKeys :
     $vals
     -> transaction $keys
 
+(* Only works on Postgres! *)
 val updateRandKeys :
     keys ::: {Type} -> vals ::: {Type} ->
     nm ::: Name -> uniques ::: {{Unit}} ->

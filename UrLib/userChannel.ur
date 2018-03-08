@@ -30,12 +30,12 @@ functor Make(M : sig type a end) = struct
     val connect =
         u <- getUser;
         rowq <- Sql.selectLookup connections u;
+        cxn <- channel;
+        Sql.insertLookup connections (u ++ {Connection = Some cxn});
         case rowq of
             None =>
-            cxn <- channel;
-            Sql.insert connections (u ++ {Connection = Some cxn});
             return cxn
-          | Some {Connection = Some cxn} => return cxn
+          | Some _ => return cxn
 
     fun send x =
         u <- getUser;

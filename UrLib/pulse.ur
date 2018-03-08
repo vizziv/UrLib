@@ -30,10 +30,8 @@ task periodic seconds_refresh = fn () =>
 
 fun beat ks =
     b <- get;
-    if b - ks.pulse > seconds_refresh then
-        @Sql.updateLookup ! _ _ ! fl sql tab (ks -- pulse) {pulse = b}
-    else
-        return ()
+    when (b - ks.pulse > seconds_refresh)
+         (@Sql.updateLookup ! ! ! fl sql _ _ tab (ks -- pulse) {pulse = b})
 
 fun lookup ks =
     vsq <- oneOrNoRows1 (@Sql.selectLookup ! ! ! fl sql _ tab ks);

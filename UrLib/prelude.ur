@@ -57,6 +57,9 @@ fun distinct [t] (_ : eq t) (_ : ord t) (xs : list t) =
         check (List.sort le xs)
     end
 
+fun when [m] (_ : monad m) (b : bool) (action : m unit) =
+    if b then action else return ()
+
 fun spawnListener [t] (action : t -> tunit) (chan : channel t) =
     let
         fun loop () = x <- recv chan; action x; loop ()

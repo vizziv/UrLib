@@ -26,7 +26,7 @@ val zip :
 (* For proving that a branch cannot be taken. *)
 val contradiction : t ::: Type -> void -> t
 
-(* For promising, without proof, that a branch cannot be taken. *)
+(* For promising without proof that a branch cannot be taken. *)
 val impossible : t ::: Type -> string -> t
 
 val monad_ident : monad (fn t => t)
@@ -40,6 +40,9 @@ val mapiPartial :
     a ::: Type -> b ::: Type -> (int -> a -> option b) -> list a -> list b
 
 val distinct : t ::: Type -> eq t -> ord t -> list t -> bool
+
+(* Does the action only when the given condition holds. *)
+val when : m ::: (Type -> Type) -> monad m -> bool -> m unit -> m unit
 
 val spawnListener : t ::: Type -> (t -> tunit) -> channel t -> tunit
 

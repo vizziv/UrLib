@@ -107,11 +107,7 @@ fun iterPred [a] (f : source (option a) -> tunit) (p : a -> bool)
                 carq <- get cons.Carq;
                 (case carq of
                      None => return ()
-                   | Some car =>
-                     if p car then
-                         f cons.Carq
-                     else
-                         return ());
+                   | Some car => when (p car) (f cons.Carq));
                 goSrc cons.Cdr
         and goSrc src = bind (get src) goLl
     in
