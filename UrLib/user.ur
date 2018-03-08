@@ -1,5 +1,3 @@
-(* TODO: separate client-side cookie from server-side ID. *)
-
 type t = int
 
 cookie user : t
@@ -23,12 +21,10 @@ fun verify uq =
     case uq of
         None => newUser
       | Some u =>
-        pq <- oneOrNoRows1 (Sql.selectLookup users {User = u});
-        case pq of
+        q <- P.lookup {User = u};
+        case q of
             None => newUser
-          | Some p =>
-            P.beat (p ++ {User = u});
-            return u
+          | Some () => return u
 
 val get =
     u <- bind (getCookie user) verify;

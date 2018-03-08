@@ -43,12 +43,8 @@ val value :
     connection (read ++ others) read
     -> LinkedList.signals $read
 
-signature Types = sig
-    con fields :: {Type}
-end
-
 signature Input = sig
-    include Types
+    con fields :: {Type}
     con chan :: Name
     constraint [chan] ~ fields
     val fl_fields : folder fields
@@ -58,7 +54,6 @@ signature Input = sig
     val show_fields : $(map show fields)
     val label_fields : $(map (fn _ => string) fields)
 end
-
 
 functor Make(M : Input) : sig
     val t : t M.fields

@@ -3,12 +3,12 @@ open Prelude
 signature Input = sig
     con key :: Name
     con pulse :: Name
-    con fields :: {Type}
+    con vals :: {Type}
     constraint [key] ~ [pulse]
-    constraint [key] ~ fields
-    constraint [pulse] ~ fields
-    val fl : folder fields
-    val sql : $(map sql_injectable fields)
+    constraint [key] ~ vals
+    constraint [pulse] ~ vals
+    val fl : folder vals
+    val sql : $(map sql_injectable vals)
 end
 
 functor Make(M : Input) = struct
@@ -17,7 +17,7 @@ open M
 
 cookie key : int
 
-table refs : ([key = int, pulse = Pulse.t] ++ fields)
+table refs : ([key = int, pulse = Pulse.t] ++ vals)
     PRIMARY KEY {key}
 
 structure P = Pulse.Make(struct
@@ -33,14 +33,14 @@ val fl = @Folder.cons [pulse] [_] ! fl
 val sql = sql ++ {pulse = _}
 
 fun setKey k =
-    t <- now;
+    n <- now;
     setCookie key
               {Value = k.key,
-               Expires = Some (addSeconds t 3600),
+               Expires = Some (addSeconds n 3600),
                Secure = True}
 
-val getKey =
-    Monad.mp (Monad.mp (Record.inj [key])) (getCookie key)
+val getKey : transaction (option {key : int}) =
+    @Mappable.mp Mappable.compose (Record.inj [key]) (getCookie key)
 
 fun set xs =
     p <- Pulse.get;

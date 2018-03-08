@@ -4,6 +4,7 @@ TODO:
   - Deal with empty request lists.
   - Double check database cleanup needs.
   - Allow reconnection by calling [connect] again.
+  - Avoid type confusion between job and key.
 *)
 
 open Prelude
@@ -149,7 +150,7 @@ fun answer (user : {Group : group, Member : member, Key : int}) job resp =
 
 fun subscribeListeners connection listeners =
     let
-        val user = connection --- [Channel = _, Source = _]
+        val user = connection -- #Channel -- #Source
         fun ls job =
             @mapNm [fn h => (h.2 -> tunit) -> h.1 -> tunit]
                    [fn h => h.1 -> tunit]
