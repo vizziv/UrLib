@@ -28,6 +28,11 @@ val snoc :
     t
     -> $([nm = t] ++ ts)
 
+val concat :
+    ts1 ::: {Type} -> ts2 ::: {Type} -> [ts1 ~ ts2] =>
+    $ts1 -> $ts2
+    -> $(ts1 ++ ts2)
+
 val set :
     keep ::: {Type} -> drop ::: {Type} -> insert ::: {Type} ->
     [keep ~ drop] => [keep ~ insert] =>

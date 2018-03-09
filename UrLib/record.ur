@@ -18,6 +18,8 @@ fun curry
 
 fun snoc [ts] (xs : $ts) [nm :: Name] [t] [[nm] ~ ts] (x : t) = xs ++ {nm = x}
 
+fun concat [ts1] [ts2] [ts1 ~ ts2] (xs1 : $ts1) (xs2 : $ts2) = xs1 ++ xs2
+
 fun set
         [keep] [drop] [insert] [keep ~ drop] [keep ~ insert]
         (xs : $(keep ++ drop)) (ys : $(insert))
