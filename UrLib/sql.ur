@@ -17,7 +17,6 @@ fun tryUnique dml =
       | Some err =>
         if String.isPrefix {Full = err,
                             Prefix = "ERROR:  duplicate key value"} then
-            (* Here this means "not inserted" rather than "updated". *)
             return NotInserted
         else
             impossible (_LOC_ ^ ": " ^ err)
@@ -52,10 +51,10 @@ fun delete
     dml (Basis.delete tab cond)
 
 fun select
-        [vals ::: {Type}] [others ::: {Type}] [vals ~ others]
-        [tabl] (_ : fieldsOf tabl (vals ++ others))
-        (tab : tabl) (cond : sql_exp [T = vals ++ others] [] [] bool) =
-    (SELECT T.{{vals}} FROM tab AS T WHERE {cond})
+        [read ::: {Type}] [others ::: {Type}] [read ~ others]
+        [tabl] (_ : fieldsOf tabl (read ++ others))
+        (tab : tabl) (cond : sql_exp [T = read ++ others] [] [] bool) =
+    (SELECT T.{{read}} FROM tab AS T WHERE {cond})
 
 fun count
         [fields ::: {Type}] [tabl] (_ : fieldsOf tabl fields)
@@ -174,6 +173,29 @@ fun deleteLookup
         (fl : folder keys) (sql : $(map sql_injectable keys))
         (tab : sql_table (keys ++ others) uniques) (ks : $keys) =
     delete tab (@lookup ! ! fl sql ks)
+
+fun selectAndSetLookup
+        [keys ::: {Type}] [read ::: {Type}] [write ::: {Type}]
+        [uniques ::: {{Unit}}]
+        [keys ~ read] [keys ~ write] [read ~ write]
+        (fl_keys : folder keys) (sql_keys : $(map sql_injectable keys))
+        (fl_read : folder read) (sql_read : $(map sql_injectable read))
+        (fl_write : folder write) (sql_write : $(map sql_injectable write))
+        (tab : sql_table (keys ++ read ++ write) uniques)
+        (ks : $keys) (rs : $read) (ws : $write) =
+    let
+        val fl = @Folder.concat ! fl_keys (@Folder.concat ! fl_write fl_read)
+        val sql = sql_keys ++ sql_write ++ sql_read
+    in
+        rowq <- oneOrNoRows1 (@selectLookup ! ! ! fl_keys sql_keys _ tab ks);
+        case rowq of
+            None =>
+            @insert fl sql tab (ks ++ ws ++ rs);
+            return rs
+          | Some row =>
+            @updateLookup ! ! ! fl_keys sql_keys fl_write sql_write tab ks ws;
+            return (row --- write)
+    end
 
 fun insertRandKeys
         [keys ::: {Type}] [vals ::: {Type}]

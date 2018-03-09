@@ -19,12 +19,12 @@ val insert :
     -> tunit
 
 val update :
-    unchanged ::: {Type} -> uniques ::: {{Unit}} ->
-    changed ::: {Type} -> [changed ~ unchanged] =>
-    folder changed -> $(map sql_injectable changed) ->
-    sql_table (changed ++ unchanged) uniques ->
-    sql_exp [T = changed ++ unchanged] [] [] bool ->
-    $changed
+    const ::: {Type} -> uniques ::: {{Unit}} ->
+    write ::: {Type} -> [write ~ const] =>
+    folder write -> $(map sql_injectable write) ->
+    sql_table (write ++ const) uniques ->
+    sql_exp [T = write ++ const] [] [] bool ->
+    $write
     -> tunit
 
 val delete :
@@ -34,11 +34,11 @@ val delete :
     -> tunit
 
 val select :
-    vals ::: {Type} -> others ::: {Type} -> [vals ~ others] =>
-    tabl ::: Type -> fieldsOf tabl (vals ++ others) ->
+    read ::: {Type} -> others ::: {Type} -> [read ~ others] =>
+    tabl ::: Type -> fieldsOf tabl (read ++ others) ->
     tabl ->
-    sql_exp [T = vals ++ others] [] [] bool
-    -> sql_query [] [] [T = vals] []
+    sql_exp [T = read ++ others] [] [] bool
+    -> sql_query [] [] [T = read] []
 
 val count :
     fields ::: {Type} -> tabl ::: Type ->
@@ -143,6 +143,21 @@ val deleteLookup :
     sql_table (keys ++ others) uniques ->
     $keys
     -> tunit
+
+(* Inserts or updates the value depeding on whether the key already exists. *)
+val selectAndSetLookup :
+    keys ::: {Type} -> read ::: {Type} -> write ::: {Type} ->
+    uniques ::: {{Unit}} ->
+    [keys ~ read] => [keys ~ write] => [read ~ write] =>
+    folder keys -> $(map sql_injectable keys) ->
+    folder read -> $(map sql_injectable read) ->
+    folder write -> $(map sql_injectable write) ->
+    sql_table (keys ++ read ++ write) uniques ->
+    $keys ->
+    (* Default values for read columns if there is no row yet. *)
+    $read ->
+    $write
+    -> transaction $read
 
 (* Only works on Postgres! *)
 val insertRandKeys :
