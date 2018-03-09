@@ -23,6 +23,10 @@ fun zip [a] [b] [c] (f : a -> b -> c) (xs : list a) (ys : list b) : list c =
       | (_, []) => []
       | (x :: xs', y :: ys') => f x y :: zip f xs' ys'
 
+fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
+
+val contradiction = fn [t] => (cases {} : void -> t)
+
 fun impossible [t] loc : t =
     error <xml>The allegedly impossible has occurred at {[loc]}.</xml>
 
@@ -60,12 +64,17 @@ fun distinct [t] (_ : eq t) (_ : ord t) (xs : list t) =
 fun when [m] (_ : monad m) (b : bool) (action : m unit) =
     if b then action else return ()
 
-fun spawnListener [t] (action : t -> tunit) (chan : channel t) =
+fun loop [m] (_ : monad m) [t] (update : t -> m t) (init : t) =
     let
-        fun loop () = x <- recv chan; action x; loop ()
+        fun go x : m void = bind (update x) go
     in
-        spawn (loop ())
+        go init
     end
+
+val spawnLoop = spawn <<< Monad.mp contradiction
+
+fun spawnListener [t] (action : t -> tunit) (chan : channel t) =
+    spawnLoop (loop (fn () => bind (recv chan) action) ())
 
 val xempty = fn [ctx] => <xml></xml> : xml ctx [] []
 
@@ -150,7 +159,3 @@ fun mapNm
            (fn [todo :: {K}] [[] ~ todo] _ _ =>
                {Fl_done = Folder.nil, MapF = fn {} => {}})
            fl [[]] ! Folder.nil Eq.refl).MapF
-
-fun cases [ts ::: {Type}] [u] (fs : $(map (fn t => t -> u) ts)) v = match v fs
-
-val contradiction = fn [t] => cases {}

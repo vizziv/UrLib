@@ -44,6 +44,11 @@ val distinct : t ::: Type -> eq t -> ord t -> list t -> bool
 (* Does the action only when the given condition holds. *)
 val when : m ::: (Type -> Type) -> monad m -> bool -> m unit -> m unit
 
+val loop :
+    m ::: (Type -> Type) -> monad m -> t ::: Type -> (t -> m t) -> t -> m void
+
+val spawnLoop : transaction void -> tunit
+
 val spawnListener : t ::: Type -> (t -> tunit) -> channel t -> tunit
 
 val xempty : ctx ::: {Unit} -> xml ctx [] []

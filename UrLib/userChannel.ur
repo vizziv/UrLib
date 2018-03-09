@@ -1,54 +1,65 @@
 open Prelude
 
-con connection a = channel {Key : RandomKey.t, Message : serialized a}
+con message a = {Key : RandomKey.t, Message : serialized a}
 
-con t a =
-    {Send : a -> tunit,
-     Connect : transaction (connection a)}
+con connection a = transaction (message a)
+
+con t a = {Send : a -> tunit, Connect : transaction (connection a)}
 
 fun send [a] (t : t a) = t.Send
 fun connect [a] (t : t a) = t.Connect
 
-val recv : a ::: Type -> connection a -> transaction a
-val spawnListener : a ::: Type -> connection a -> (a -> tunit) -> tunit
+val recv = fun [a] => @@ident [connection a]
+val spawnListener = basis
 
 functor Make(M : sig type a end) = struct
-    open M
 
-    table connections : {User : User.t, Connection : connection a}
-        PRIMARY KEY User
+open M
 
-    table holding :
-        {User : User.t,
-         Message : serialized a,
-         When : time}
+table connections : {User : User.t, Channel : channel (message a)}
+    PRIMARY KEY User
 
-    table sending :
-        {User : User.t,
-         Message : serialized a,
-         Key : RandomKey.t}
-        PRIMARY KEY User
-        CONSTRAINT UNIQUE Key
+table holding :
+    {User : User.t,
+     Message : serialized a,
+     Time : time}
 
-    val getUser = Record.inj [#User] <<< User.get
+table sending :
+    {User : User.t,
+     Message : serialized a,
+     Key : RandomKey.t}
+    PRIMARY KEY User
 
-    val connect =
-        u <- getUser;
-        cxn <- channel;
-        _ <- Sql.setLookup connections (u ++ {Connection = cxn});
-        return cxn
+val getUser = Monad.exec {User = User.get}
 
-    fun send x =
-        u <- getUser;
-        n <- now;
-         <- Monad.mp (fn x => x > 0) Sql.countLookup sending 
-        Sql.insertRandKeys messages
-                           (u ++ {Message = serialize x, When = n})
-        queryI1 (Sql.lookup users u)
-                ()
+val connect =
+    user <- getUser;
+    chan <- channel;
+    _ <- Sql.setLookup connections user {Channel = chan};
+    return chan
 
-    fun ack msg
+fun sendFromHolding user =
 
-    val t = {Send = send, Connect = connect}
+fun sendFromSending user =
+
+
+fun send msg =
+    user <- getUser;
+    msg <- Monad.exec {Message = return (serialize msg), Key = Random.gen};
+    r <- Sql.insertLookup sending user msg;
+    case r of
+        Inserted =>
+        queryI1 (Sql.selectLookup connections user)
+                (fn {Channel = chan} => Basis.send chan msg)
+      | NotInserted =>
+        time <- Monad.exec {Time = now};
+        Sql.insert holding (user ++ msg -- #Key ++ time)
+
+fun ack key =
+    user <- getUser;
+    keyCorrect <- Sql.existsLookup connections (user ++ key);
+    when keyCorrect (sendFromHolding user)
+
+val t = {Send = send, Connect = connect}
 
 end
