@@ -47,16 +47,18 @@ signature Input = sig
     con fields :: {Type}
     con chan :: Name
     constraint [chan] ~ fields
-    val fl_fields : folder fields
-    val eq_fields : $(map eq fields)
-    val sqlp_fields : $(map sql_injectable_prim fields)
-    (* For debugging. *)
-    val show_fields : $(map show fields)
-    val label_fields : $(map (fn _ => string) fields)
+    val fl : folder fields
+    val eq : $(map eq fields)
+    val sqlp : $(map sql_injectable_prim fields)
+    structure Debug : sig
+        val show : $(map show fields)
+        val label : $(map (fn _ => string) fields)
+    end
 end
 
 functor Make(M : Input) : sig
     val t : t M.fields
-    (* For debugging. *)
-    table tab : M.fields
+    structure Debug : sig
+        table tab : M.fields
+    end
 end

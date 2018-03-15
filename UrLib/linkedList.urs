@@ -35,4 +35,6 @@ val update : a ::: Type -> (a -> a) -> (a -> bool) -> sources a -> tunit
 
 val delete : a ::: Type -> (a -> bool) -> sources a -> tunit
 
-val debugShow : a ::: Type -> show a -> sources a -> tunit
+structure Debug : sig
+    val print : a ::: Type -> show a -> sources a -> tunit
+end

@@ -54,7 +54,10 @@ fun ureq () : transaction page =
 
 structure Mt = MagicTable.Make(struct
     con chan = #Channel
-    val label_fields = {X = "X", Y = "Y", Z = "Z"}
+    structure Debug = struct
+        val show = {} ++ _
+        val label = {X = "X", Y = "Y", Z = "Z"}
+    end
 end)
 
 fun mtInsert x = MagicTable.insert Mt.t x

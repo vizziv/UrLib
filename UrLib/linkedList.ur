@@ -119,19 +119,21 @@ fun update [a] (f : a -> a) =
 
 val delete = fn [a] => iterPred (fn src => set src None)
 
-fun debugShow [a] (_ : show a) (srcs : sources a) =
-    let
-        fun goLl ll =
-            case ll of
-                SrcNil => return ""
-              | SrcCons cons =>
-                carq <- get cons.Carq;
-                acc <- goSrc cons.Cdr;
-                return ((case carq of
-                             None => "  ~"
-                           | Some car => "  [" ^ show car ^ "]")
-                        ^ acc)
-        and goSrc src = bind (get src) goLl
-    in
-        bind (goSrc srcs.First) debug
-    end
+structure Debug = struct
+    fun print [a] (_ : show a) (srcs : sources a) =
+        let
+            fun goLl ll =
+                case ll of
+                    SrcNil => return ""
+                  | SrcCons cons =>
+                    carq <- get cons.Carq;
+                    acc <- goSrc cons.Cdr;
+                    return ((case carq of
+                                 None => "  ~"
+                               | Some car => "  [" ^ show car ^ "]")
+                            ^ acc)
+            and goSrc src = bind (get src) goLl
+        in
+            bind (goSrc srcs.First) debug
+        end
+end
