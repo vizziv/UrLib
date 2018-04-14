@@ -95,9 +95,9 @@ fun mt () : transaction page =
                                        Z = get z};
                             rpc (deleteYz yz)}/>
         <hr/>
-        {LinkedList.mapX (fn {X = x} =>
-                             <xml>X = {[x]}<br/></xml>)
-                         (MagicTable.value cxn)}
+        {LinkedList.mapSglX (fn {X = x} =>
+                                <xml>X = {[x]}<br/></xml>)
+                            (MagicTable.value cxn)}
       </body>
     </xml>
 

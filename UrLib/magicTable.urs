@@ -41,7 +41,7 @@ val listen :
 val value :
     read ::: {Type} -> others ::: {Type} -> [read ~ others] =>
     connection (read ++ others) read
-    -> LinkedList.signals $read
+    -> signal (LinkedList.signals $read)
 
 signature Input = sig
     con fields :: {Type}

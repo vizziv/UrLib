@@ -17,6 +17,12 @@ val mapX :
     signals a
     -> xml ([Dyn] ++ ctx) [] []
 
+val mapSglX :
+    a ::: Type -> ctx ::: {Unit} -> [[Dyn] ~ ctx] =>
+    (a -> xml ([Dyn] ++ ctx) [] []) ->
+    signal (signals a)
+    -> xml ([Dyn] ++ ctx) [] []
+
 (* Write-only list of sources. *)
 con sources :: Type -> Type
 
@@ -27,7 +33,7 @@ val mk :
     (b ::: Type -> (a -> b -> transaction b) -> b -> transaction b)
     -> transaction (sources a)
 
-val value : a ::: Type -> sources a -> signals a
+val value : a ::: Type -> sources a -> signal (signals a)
 
 val insert : a ::: Type -> a -> sources a -> tunit
 
