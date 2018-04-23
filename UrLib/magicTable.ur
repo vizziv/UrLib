@@ -122,8 +122,11 @@ fun update [write] (sub : Subset.t fields write)
                             (Eq.cast pf [fn fs => sql_table fs []] tab)
                             (Eq.cast pf [filter] filter).Sql
                             xs;
-                queryI1 (selectListeners xqs) sendUpdate;
-                queryI1 (selectListeners filter.Fieldqs) sendUpdate
+                queryI1 (Sql.select listeners
+                                    (@Sql.compats ! ! fl sqlp
+                                                  (xqs ::
+                                                   filter.Fieldqs :: [])))
+                        sendUpdate
             end)
 
 fun delete (filter : filter fields) =

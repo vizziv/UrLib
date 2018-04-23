@@ -1,15 +1,6 @@
 include Prelude.Types
 
-con t ::
-    (* fields *) {Type} ->
-    (* selections *) {{Type} -> (Type * Type)}
-    -> Type
-
-con selection ::
-    ((* selected fields*) {Type}
-     -> ((* result *) Type *
-         (* internal state *) Type))
-    -> Type
+con t :: (* fields *) {Type} -> Type
 
 con filter :: (* fields *) {Type} -> Type
 con query :: (* fields *) {Type} -> (* read *) {Type} -> Type
@@ -53,22 +44,13 @@ val value :
     connection (read ++ others) read
     -> signal (LinkedList.signals $read)
 
-val selection_linkedList :
-    fields ::: {Type}
-    -> selection
-           (fn read =>
-               (LinkedList.signals $read,
-                LinkedList.sources $fields))
-
 signature Input = sig
     con fields :: {Type}
-    con selections :: {{Type} -> (Type * Type)}
     con chan :: Name
     constraint [chan] ~ fields
     val fl : folder fields
     val eq : $(map eq fields)
     val sqlp : $(map sql_injectable_prim fields)
-    val selection : $(map selection selections)
     structure Debug : sig
         val show : $(map show fields)
         val label : $(map (fn _ => string) fields)

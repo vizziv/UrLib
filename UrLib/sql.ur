@@ -289,6 +289,16 @@ fun compat
                 fl sqlp kqs [[]] ! ! ! !
     end
 
+fun compats
+        [tabs ::: {{Type}}] [agg ::: {{Type}}] [exps ::: {Type}]
+        [tab ::: Name] [keys ::: {Type}] [others ::: {Type}]
+        [keys ~ others] [[tab] ~ tabs]
+        (fl : folder keys) (sqlp : $(map sql_injectable_prim keys))
+    : list $(map option keys)
+      -> sql_exp ([tab = (map option keys) ++ others] ++ tabs) agg exps bool =
+    List.foldl (fn ks acc => (SQL {acc} OR {@compat ! ! fl sqlp ks}))
+               (SQL FALSE)
+
 fun selectCompat
         [keys ::: {Type}] [vals ::: {Type}] [others ::: {Type}]
         [keys ~ vals] [keys ~ others] [vals ~ others]

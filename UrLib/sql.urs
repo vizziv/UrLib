@@ -188,6 +188,14 @@ val compat :
     $(map option keys)
     -> sql_exp ([tab = (map option keys) ++ others] ++ tabs) agg exps bool
 
+val compats :
+    tabs ::: {{Type}} -> agg ::: {{Type}} -> exps ::: {Type} ->
+    tab ::: Name -> keys ::: {Type} -> others ::: {Type} ->
+    [keys ~ others] => [[tab] ~ tabs] =>
+    folder keys -> $(map sql_injectable_prim keys) ->
+    list $(map option keys)
+    -> sql_exp ([tab = (map option keys) ++ others] ++ tabs) agg exps bool
+
 val selectCompat :
     keys ::: {Type} -> vals ::: {Type} -> others ::: {Type} ->
     [keys ~ vals] => [keys ~ others] => [vals ~ others] =>
