@@ -113,16 +113,17 @@ fun update [write] (sub : Subset.t fields write)
         (fn [others] [write ~ others] fl_write _ (pf : Eq.t fields _) =>
             let
                 val xqs = Subset.injqs xs
+                fun sendUpdate (row : {chan : _}) =
+                    debug "sending update";
+                    send row.chan (Update {Values = xqs,
+                                           Filter = filter.Fieldqs})
             in
                 @Sql.update ! fl_write (Subset.projs sql)
                             (Eq.cast pf [fn fs => sql_table fs []] tab)
                             (Eq.cast pf [filter] filter).Sql
                             xs;
-                queryI1 (selectListeners xqs)
-                        (fn (row : {chan : _}) =>
-                            debug "sending update";
-                            send row.chan (Update {Values = xqs,
-                                                   Filter = filter.Fieldqs}))
+                queryI1 (selectListeners xqs) sendUpdate;
+                queryI1 (selectListeners filter.Fieldqs) sendUpdate
             end)
 
 fun delete (filter : filter fields) =

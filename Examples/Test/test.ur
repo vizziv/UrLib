@@ -70,7 +70,9 @@ fun mt () : transaction page =
     x <- source "";
     y <- source (Some 0.0);
     z <- source False;
-    cxn <- MagicTable.connect Mt.t (MagicTable.select (MagicTable.lookup {Z = True}));
+    cxn <- MagicTable.connect
+               Mt.t
+               (MagicTable.select (MagicTable.lookup {Z = True}));
     return <xml>
       <body onload={MagicTable.listen cxn}>
         <h1>MagicTable Test</h1>
@@ -81,23 +83,21 @@ fun mt () : transaction page =
                 onclick={fn _ =>
                             xyz <- Monad.exec
                                        {X = get x,
-                                        Y = Monad.mp (Option.get 0.0
-                                                      >>> round)
+                                        Y = Monad.mp (Option.get 0.0 >>> round)
                                                      (get y),
                                         Z = get z};
                             rpc (mtInsert xyz)}/>
         <button value="delete"
                 onclick={fn _ =>
                             yz <- Monad.exec
-                                      {Y = Monad.mp (Option.get 0.0
-                                                     >>> round)
+                                      {Y = Monad.mp (Option.get 0.0 >>> round)
                                                     (get y),
                                        Z = get z};
                             rpc (deleteYz yz)}/>
         <hr/>
-        {LinkedList.mapSglX (fn {X = x} =>
-                                <xml>X = {[x]}<br/></xml>)
-                            (MagicTable.value cxn)}
+        {LinkedList.mapSglX
+             (fn {X = x} => <xml>X = {[x]}<br/></xml>)
+             (MagicTable.value cxn)}
       </body>
     </xml>
 
