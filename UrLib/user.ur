@@ -1,3 +1,5 @@
+functor Make(Empty : sig end) = struct
+
 type t = RandomKey.t
 
 val sqlp = _
@@ -50,5 +52,7 @@ task periodic seconds_refresh =
              FROM tab LEFT JOIN users ON tab.{user} = users.User
              WHERE users.User = NULL)
             (Sql.deleteLookup tab)
+
+end
 
 end
