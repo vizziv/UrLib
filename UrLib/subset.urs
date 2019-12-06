@@ -24,6 +24,11 @@ val fl :
 val projs :
     fields ::: {Type} -> keep ::: {Type} -> t fields keep -> $fields -> $keep
 
+val set :
+    fields ::: {Type} -> keep ::: {Type} -> t fields keep ->
+    $fields -> $keep
+    -> $fields
+
 val over :
     fields ::: {Type} -> keep ::: {Type} -> t fields keep ->
     ($keep -> $keep)

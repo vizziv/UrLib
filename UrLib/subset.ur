@@ -32,7 +32,11 @@ fun projs [fields] [keep] (t : t fields keep) =
 
 fun over [fields] [keep] (t : t fields keep) =
     t (fn [drop] [keep ~ drop] _ _ pf (f : $keep -> $keep) =>
-          Eq.over pf [record] (fn xs => xs --- keep ++ f (xs --- drop)))
+          Eq.cast (Eq.symm pf) [fn ts => $ts -> $ts]
+                  (fn xs => xs --- keep ++ f (xs --- drop)))
+
+fun set [fields] [keep] (t : t fields keep) (xs : $fields) (ys : $keep) =
+    @over @@t (fn _ => ys) xs
 
 fun injqs [fields] [keep] (t : t fields keep) =
     t (fn [drop] [keep ~ drop]
