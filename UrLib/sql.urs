@@ -1,3 +1,5 @@
+(* Warning: functions using insertResult only work on Postgres! *)
+
 include Prelude.Types
 
 datatype insertResult = Inserted | NotInserted

@@ -1,3 +1,6 @@
+(* Warning: this idea basically can't work for general queries, so this whole
+   system needs a redesign. *)
+
 include Prelude.Types
 
 con t :: (* fields *) {Type} -> Type
