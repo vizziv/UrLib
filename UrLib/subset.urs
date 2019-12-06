@@ -24,6 +24,11 @@ val fl :
 val projs :
     fields ::: {Type} -> keep ::: {Type} -> t fields keep -> $fields -> $keep
 
+val over :
+    fields ::: {Type} -> keep ::: {Type} -> t fields keep ->
+    ($keep -> $keep)
+    -> $fields -> $fields
+
 val injqs :
     fields ::: {Type} -> keep ::: {Type} ->
     t fields keep ->

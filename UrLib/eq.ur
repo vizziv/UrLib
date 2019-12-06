@@ -11,6 +11,9 @@ fun trans [K] [a] [b] [c] (pf1 : t a b) (pf2 : t b c) [tf] =
 
 fun cast [K] [a] [b] (pf : t a b) [tf ::_] = pf.Fwd
 
+fun over [K] [a] [b] (pf : t a b) [tf ::_] (f : tf b -> tf b) =
+    pf.Fwd >>> f >>> pf.Bwd
+
 fun mp [K1] [K2] [a] [b] [tf ::_] (pf : t a b) [tg] = @@pf [fn a => tg (tf a)]
 
 fun make [nm ::_] [a] [others] [r] [[nm] ~ others] (pf : t _ _) =

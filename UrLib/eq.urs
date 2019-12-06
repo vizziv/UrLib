@@ -14,6 +14,13 @@ val cast :
     tf a
     -> tf b
 
+val over :
+    K -->
+    a ::: K -> b ::: K ->
+    t a b -> tf :: (K -> Type) ->
+    (tf b -> tf b)
+    -> tf a -> tf a
+
 val mp :
     K1 --> K2 -->
     a ::: K1 -> b ::: K1 -> tf :: (K1 -> K2) ->
