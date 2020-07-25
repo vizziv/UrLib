@@ -3,7 +3,7 @@ open Prelude
 signature Input = sig
     type t
     con interface :: {Type -> Type}
-    val t : $(map (fn op => op t) interface)
+    val t : $(map (fn tf => tf t) interface)
 end
 
 functor Make(M : Input) = struct open M end

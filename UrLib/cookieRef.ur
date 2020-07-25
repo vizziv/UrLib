@@ -25,7 +25,6 @@ structure P = Pulse.Make(struct
     con pulse = pulse
     val tab = refs
     val seconds_refresh = 3600
-    val seconds_timeout = 2 * seconds_refresh
 end)
 
 val fl = @Folder.cons [pulse] [_] ! fl

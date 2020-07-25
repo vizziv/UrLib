@@ -15,7 +15,6 @@ structure P = Pulse.Make(struct
     con pulse = #Pulse
     val tab = users
     val seconds_refresh = seconds_refresh
-    val seconds_timeout = 2 * seconds_refresh
 end)
 
 val newUser =

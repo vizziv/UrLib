@@ -17,7 +17,6 @@ signature Input = sig
     val sql : $(map sql_injectable keys)
     table tab : (keys ++ vals ++ [pulse = t])
     val seconds_refresh : int
-    val seconds_timeout : int
 end
 
 functor Make(M : Input) = struct
@@ -26,7 +25,7 @@ open M
 
 task periodic seconds_refresh = fn () =>
     b <- get;
-    Sql.delete tab (SQL ({[b]} - T.{pulse}) > {[seconds_timeout]})
+    Sql.delete tab (SQL ({[b]} - T.{pulse}) > {[2 * seconds_refresh]})
 
 fun beat ks =
     b <- get;

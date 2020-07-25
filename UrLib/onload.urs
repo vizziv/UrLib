@@ -1,3 +1,5 @@
+(* DEPRECATED *)
+
 include Prelude.Types
 
 con t :: Type -> Type

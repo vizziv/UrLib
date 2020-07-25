@@ -1,3 +1,4 @@
+(* DEPRECATED *)
 (* From the official Ur/Web demo. *)
 
 include Prelude.Types

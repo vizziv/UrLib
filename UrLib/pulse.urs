@@ -1,9 +1,13 @@
+(* A mechanism for having database rows expire when inactive. *)
+
 include Prelude.Types
 
+(* Type of "pulses", which is a timestamp. *)
 type t
 
 val sqlp : sql_injectable_prim t
 
+(* Get the current pulse. *)
 val get : transaction t
 
 signature Input = sig
@@ -17,10 +21,13 @@ signature Input = sig
     val sql : $(map sql_injectable keys)
     table tab : (keys ++ vals ++ [pulse = t])
     val seconds_refresh : int
-    val seconds_timeout : int
 end
 
+(* Periodically expunge the given table.
+   Polls every [seconds_refresh] seconds.
+   Removes rows that have not been looked up for [2 * seconds_refresh] seconds.
+ *)
 functor Make(M : Input) : sig
-    val beat : $(M.keys ++ [M.pulse = t]) -> tunit
+    (* Find a row and delay expunging it. *)
     val lookup : $M.keys -> transaction (option $M.vals)
 end

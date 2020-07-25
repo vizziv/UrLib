@@ -4,7 +4,7 @@ datatype llSignals a =
     SglNil
   | SglCons of {Carq : signal (option a), Cdr : signal (llSignals a)}
 
-con signals = llSignals
+con signals a = signal (llSignals a)
 
 fun mp [a] [b] (f : a -> b) =
     let
@@ -16,8 +16,10 @@ fun mp [a] [b] (f : a -> b) =
                          Cdr = goSgl cons.Cdr}
         and goSgl sgl = Monad.mp goLl sgl
     in
-        goLl
+        goSgl
     end
+
+val mappable_signals = @@Mappable.mk [signals] @@mp
 
 fun foldl [a] [b] (f : a -> b -> b) (z : b) =
     let
@@ -32,7 +34,7 @@ fun foldl [a] [b] (f : a -> b -> b) (z : b) =
                           | Some car => (f car cdr))
         and goSgl sgl = bind sgl goLl
     in
-        goLl
+        goSgl
     end
 
 fun mapX [a] [ctx] [[Dyn] ~ ctx] (f : a -> xml ([Dyn] ++ ctx) [] []) =
@@ -47,11 +49,8 @@ fun mapX [a] [ctx] [[Dyn] ~ ctx] (f : a -> xml ([Dyn] ++ ctx) [] []) =
               </xml>
         and goSgl sgl = xdyn (Monad.mp goLl sgl)
     in
-        goLl
+        goSgl
     end
-
-fun mapSglX [a] [ctx] [[Dyn] ~ ctx] (f : a -> xml ([Dyn] ++ ctx) [] []) =
-    xdyn <<< Monad.mp (mapX f)
 
 datatype llSources a =
     SrcNil
@@ -77,7 +76,7 @@ fun mk [a] (fold : b ::: Type ->
         return {First = first, Last = last}
     end
 
-fun value [a] (srcs : sources a) : signal (signals a) =
+fun value [a] (srcs : sources a) : signals a =
     let
         fun goLl ll =
             case ll of

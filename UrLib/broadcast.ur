@@ -1,7 +1,7 @@
 open Prelude
 
 signature Input = sig
-    type data
+    type message
     type group
     type member
     val sqlp_group : sql_injectable_prim group
@@ -12,17 +12,17 @@ functor Make(M : Input) = struct
 
 open M
 
-type connection = channel data
+type connection = channel message
 
 table listeners :
     {Group : group,
      Member : member,
-     Channel : channel data}
+     Channel : channel message}
     PRIMARY KEY (Group, Member)
 
-fun tell group data =
+fun tell group message =
     queryI1 (Sql.selectLookup listeners {Group = group})
-            (fn {Channel = chan} => send chan data)
+            (fn {Channel = chan} => send chan message)
 
 fun connect user =
     chan <- channel;

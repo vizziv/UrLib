@@ -1,3 +1,4 @@
+(* DEPRECATED *)
 (* Warning: this idea basically can't work for general queries, so this whole
    system needs a redesign. *)
 
@@ -45,7 +46,7 @@ val listen :
 val value :
     read ::: {Type} -> others ::: {Type} -> [read ~ others] =>
     connection (read ++ others) read
-    -> signal (LinkedList.signals $read)
+    -> LinkedList.signals $read
 
 signature Input = sig
     con fields :: {Type}

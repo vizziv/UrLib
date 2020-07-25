@@ -17,8 +17,7 @@ fun mp
         [tf1 :: K -> Type] [tf2 :: K -> Type]
         [r ::: {K}] (fl : folder r)
         (fs : $(map (fn t :: K => tf1 t -> tf2 t) r))
-    : variant (map tf1 r)
-      -> variant (map tf2 r) =
+    : variant (map tf1 r) -> variant (map tf2 r) =
     @@cases [map tf1 r] [_]
             (@mapNm [fn t => tf1 t -> tf2 t]
                     [fn t => tf1 t -> variant (map tf2 r)]
@@ -38,12 +37,13 @@ fun mapU
         (@map0 [fn t => tf1 t -> tf2 t] (fn [t ::_] => f) fl)
 
 fun traverse
-    [K]
-    [tf1 :: K -> Type] [tf2 :: K -> Type]
-    [r ::: {K}] (fl : folder r)
-    [f ::: Type -> Type] (_ : Mappable.t f)
-    (fs : $(map (fn t :: K => tf1 t -> f (tf2 t)) r))
-    : variant (map tf1 r) -> f (variant (map tf2 r)) =
+        [K]
+        [tf1 :: K -> Type] [tf2 :: K -> Type]
+        [r ::: {K}] (fl : folder r)
+        [f ::: Type -> Type] (pf : Mappable.t f)
+        (fs : $(map (fn t :: K => tf1 t -> f (tf2 t)) r))
+    : variant (map tf1 r)
+      -> f (variant (map tf2 r)) =
     @@cases [map tf1 r] [_]
             (@mapNm [fn t => tf1 t -> f (tf2 t)]
                     [fn t => tf1 t -> f (variant (map tf2 r))]

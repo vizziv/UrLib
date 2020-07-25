@@ -1,3 +1,5 @@
+(* Use a randomly generated cookie to refer to server-side values. *)
+
 include Prelude.Types
 
 signature Input = sig
@@ -12,6 +14,8 @@ signature Input = sig
 end
 
 functor Make(M : Input) : sig
+    (* Set server-side values and set the cookie to refer to them. *)
     val set : $M.vals -> tunit
+    (* Use the cookie to attempt to get server-side values. *)
     val get : transaction (option $M.vals)
 end

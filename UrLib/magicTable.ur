@@ -10,7 +10,7 @@ con query fields keep =
 
 con connection fields read =
     {Listen : tunit,
-     Value : signal (LinkedList.signals $read)}
+     Value : LinkedList.signals $read}
 
 con t fields =
     {Insert : $fields -> tunit,
@@ -189,7 +189,7 @@ fun listen [read] (cxn : connection read) =
     end
 
 fun value [read] (sub : Subset.t fields read) (cxn : connection read) =
-    Monad.mp (LinkedList.mp (@Subset.projs sub)) (LinkedList.value cxn.Source)
+    LinkedList.mp (@Subset.projs sub) (LinkedList.value cxn.Source)
 
 val t =
     {Insert = insert,
