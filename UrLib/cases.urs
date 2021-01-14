@@ -44,7 +44,7 @@ val traverse :
     variant (map tf1 r)
     -> f (variant (map tf2 r))
 
-(* Apply a case-dependent if both inputs are in the same case. *)
+(* Apply a case-dependent function if both inputs are in the same case. *)
 val diag :
     K -->
     tf1 :: (K -> Type) -> tf2 :: (K -> Type) -> tf3 :: (K -> Type) ->
